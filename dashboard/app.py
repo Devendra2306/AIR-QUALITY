@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from pathlib import Path
 
 import dash
@@ -265,6 +266,12 @@ def flow_node(title: str, value: str, accent: str) -> html.Div:
 
 
 app = dash.Dash(__name__, title="Air Quality Dashboard")
+server = app.server
+
+
+@server.route("/healthz")
+def health_check():
+    return "ok", 200
 
 app.layout = html.Div(
     className="app-shell",
@@ -509,7 +516,12 @@ def update_summary(_):
     ],
 )
 def update_controls(_, current_location, current_parameter, current_start, current_end):
-    raw_df = load_air_quality_data()
+    try:
+        raw_df = load_air_quality_data()
+    except Exception:
+        logging.exception("Could not load dashboard controls")
+        return [], [], None, None, None, None, None, None
+
     location_options = make_location_options(raw_df)
     parameter_options = make_parameter_options(raw_df)
 
@@ -696,4 +708,6 @@ def update_plots(
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", "8050"))
+    debug = os.environ.get("DASH_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=port, debug=debug)

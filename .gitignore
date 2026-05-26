@@ -2,5 +2,6 @@ secrets.json
 __pycache__/
 *.pyc
 *.db
+!air_quality.db
 .env
 .ipynb_checkpoints/
