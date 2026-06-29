@@ -37,3 +37,17 @@ OpenAQ v3 latest API -> collector job -> DuckDB raw.air_quality -> presentation 
 ```
 
 Keep archive extraction for historical backfills, and use the API collector for current readings.
+
+Run one live collection pass:
+
+```powershell
+python pipeline\live_collector.py --locations-file-path location.json --database-path air_quality.db
+```
+
+For testing a small subset:
+
+```powershell
+python pipeline\live_collector.py --locations-file-path location.json --database-path air_quality.db --max-locations 2 --dry-run
+```
+
+The collector reads the OpenAQ key from `OPENAQ_API_KEY` first, then from `secrets.json` using `openaq-api-key`.

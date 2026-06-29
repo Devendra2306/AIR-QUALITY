@@ -16,6 +16,7 @@ LOCATION_PATH = PROJECT_ROOT / "location.json"
 DB_PATH = PROJECT_ROOT / "air_quality.db"
 
 REFRESH_INTERVAL_MS = 5 * 60 * 1000
+QUALITY_STALE_HOURS = 24
 RAW_TABLE_CANDIDATES = ("air_quality", "air_quality_data")
 PARAMETER_LABELS = {
     "pm25": "PM2.5",
@@ -43,8 +44,10 @@ def parameter_label(parameter: str) -> str:
     return PARAMETER_LABELS.get(parameter, parameter.upper())
 
 
-def empty_figure(message: str) -> go.Figure:
+def empty_figure(message: str, loading: bool = False) -> go.Figure:
     fig = go.Figure()
+    if loading:
+        message = "Loading data..."
     fig.update_layout(
         template="plotly_white",
         annotations=[
@@ -107,9 +110,13 @@ def get_raw_table_name(db_connection) -> str:
     )
 
 
-def load_air_quality_data() -> pd.DataFrame:
+def load_air_quality_data(include_invalid: bool = False) -> pd.DataFrame:
     with connect_read_only() as db_connection:
         raw_table_name = get_raw_table_name(db_connection)
+        value_filter = "" if include_invalid else """
+            WHERE "value" IS NOT NULL
+              AND "value" >= 0
+        """
         query = f"""
             SELECT
                 location_id,
@@ -122,8 +129,7 @@ def load_air_quality_data() -> pd.DataFrame:
                 "value" AS value,
                 ingestion_datetime
             FROM {raw_table_name}
-            WHERE "value" IS NOT NULL
-              AND "value" >= 0
+            {value_filter}
         """
         data = db_connection.execute(query).fetchdf()
 
@@ -222,6 +228,45 @@ def get_raw_table_label() -> str:
         return get_raw_table_name(db_connection)
 
 
+def get_data_quality_summary() -> dict:
+    raw_df = load_air_quality_data(include_invalid=True)
+
+    if raw_df.empty:
+        return {
+            "raw_df": raw_df,
+            "clean_df": raw_df,
+            "total_records": 0,
+            "missing_values": 0,
+            "negative_values": 0,
+            "duplicate_records": 0,
+            "stale_locations": 0,
+            "latest_reading": None,
+            "parameter_counts": pd.Series(dtype="int64"),
+            "location_counts": pd.Series(dtype="int64"),
+        }
+
+    raw_df["value"] = pd.to_numeric(raw_df["value"], errors="coerce")
+    clean_df = raw_df[raw_df["value"].notna() & (raw_df["value"] >= 0)].copy()
+    duplicate_columns = ["location_id", "datetime", "parameter", "sensors_id"]
+    duplicate_records = raw_df.duplicated(subset=duplicate_columns).sum()
+    latest_reading = raw_df["datetime"].max()
+    latest_by_location = raw_df.groupby("location")["datetime"].max()
+    stale_cutoff = latest_reading - pd.Timedelta(hours=QUALITY_STALE_HOURS)
+
+    return {
+        "raw_df": raw_df,
+        "clean_df": clean_df,
+        "total_records": len(raw_df),
+        "missing_values": int(raw_df["value"].isna().sum()),
+        "negative_values": int((raw_df["value"] < 0).sum()),
+        "duplicate_records": int(duplicate_records),
+        "stale_locations": int((latest_by_location < stale_cutoff).sum()),
+        "latest_reading": latest_reading,
+        "parameter_counts": clean_df["parameter"].value_counts().sort_index(),
+        "location_counts": clean_df["location"].value_counts().head(12),
+    }
+
+
 def make_location_options(raw_df: pd.DataFrame) -> list[dict]:
     if raw_df.empty:
         return [
@@ -265,7 +310,13 @@ def flow_node(title: str, value: str, accent: str) -> html.Div:
     )
 
 
-app = dash.Dash(__name__, title="Air Quality Dashboard")
+app = dash.Dash(
+    __name__,
+    title="Air Quality Dashboard",
+    external_stylesheets=[
+        "/assets/style-modern.css"
+    ]
+)
 server = app.server
 
 
@@ -281,6 +332,7 @@ app.layout = html.Div(
             interval=REFRESH_INTERVAL_MS,
             n_intervals=0,
         ),
+        dcc.Download(id="download-data"),
         html.Header(
             className="topbar",
             children=[
@@ -364,6 +416,18 @@ app.layout = html.Div(
                                         ),
                                     ],
                                 ),
+                                html.Div(
+                                    className="control control--export",
+                                    children=[
+                                        html.Label("Export"),
+                                        html.Button(
+                                            "Download CSV",
+                                            id="download-csv",
+                                            n_clicks=0,
+                                            className="export-button",
+                                        ),
+                                    ],
+                                ),
                             ],
                         ),
                         html.Section(
@@ -384,6 +448,39 @@ app.layout = html.Div(
                                     children=[
                                         dcc.Graph(
                                             id="box-plot",
+                                            config={"displaylogo": False},
+                                            className="graph",
+                                        )
+                                    ],
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+                dcc.Tab(
+                    label="Quality",
+                    className="tab",
+                    selected_className="tab tab--selected",
+                    children=[
+                        html.Section(id="quality-cards", className="metric-grid"),
+                        html.Section(
+                            className="graph-grid",
+                            children=[
+                                html.Div(
+                                    className="panel",
+                                    children=[
+                                        dcc.Graph(
+                                            id="quality-parameter-chart",
+                                            config={"displaylogo": False},
+                                            className="graph",
+                                        )
+                                    ],
+                                ),
+                                html.Div(
+                                    className="panel",
+                                    children=[
+                                        dcc.Graph(
+                                            id="quality-location-chart",
                                             config={"displaylogo": False},
                                             className="graph",
                                         )
@@ -498,6 +595,78 @@ def update_summary(_):
 
 @app.callback(
     [
+        Output("quality-cards", "children"),
+        Output("quality-parameter-chart", "figure"),
+        Output("quality-location-chart", "figure"),
+    ],
+    Input("refresh-interval", "n_intervals"),
+)
+def update_quality(_):
+    try:
+        quality = get_data_quality_summary()
+    except Exception:
+        logging.exception("Could not load data quality summary")
+        return (
+            [
+                metric_card("Quality Status", "Error", "red"),
+                metric_card("Records", "Unavailable", "amber"),
+            ],
+            empty_figure("Data quality could not be loaded."),
+            empty_figure("Data quality could not be loaded."),
+        )
+
+    if quality["total_records"] == 0:
+        return (
+            [
+                metric_card("Records", "0", "amber"),
+                metric_card("Missing Values", "0", "blue"),
+                metric_card("Negative Values", "0", "green"),
+                metric_card("Duplicates", "0", "red"),
+            ],
+            empty_figure("No records to profile yet."),
+            empty_figure("No records to profile yet."),
+        )
+
+    stale_label = f">{QUALITY_STALE_HOURS}h"
+    quality_cards = [
+        metric_card("Records Checked", f"{quality['total_records']:,}", "blue"),
+        metric_card("Missing Values", f"{quality['missing_values']:,}", "amber"),
+        metric_card("Negative Values", f"{quality['negative_values']:,}", "red"),
+        metric_card("Stale Locations", f"{quality['stale_locations']:,} {stale_label}", "green"),
+    ]
+
+    parameter_counts = quality["parameter_counts"].rename_axis("parameter").reset_index(name="records")
+    parameter_counts["parameter_label"] = parameter_counts["parameter"].map(parameter_label)
+    parameter_fig = px.bar(
+        parameter_counts,
+        x="parameter_label",
+        y="records",
+        color="parameter_label",
+        title="Valid Records by Parameter",
+        labels={"parameter_label": "Parameter", "records": "Records"},
+        color_discrete_sequence=["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
+    )
+    parameter_fig.update_layout(showlegend=False)
+    style_figure(parameter_fig)
+
+    location_counts = quality["location_counts"].rename_axis("location").reset_index(name="records")
+    location_fig = px.bar(
+        location_counts,
+        x="records",
+        y="location",
+        orientation="h",
+        title="Top Locations by Record Count",
+        labels={"records": "Records", "location": "Location"},
+        color_discrete_sequence=["#10b981"],
+    )
+    location_fig.update_layout(yaxis={"categoryorder": "total ascending"})
+    style_figure(location_fig)
+
+    return quality_cards, parameter_fig, location_fig
+
+
+@app.callback(
+    [
         Output("location-dropdown", "options"),
         Output("parameter-dropdown", "options"),
         Output("location-dropdown", "value"),
@@ -600,10 +769,11 @@ def update_map(_):
             "pm25": ":.2f",
             "so2": ":.2f",
         },
-        color_continuous_scale=["#2f9e44", "#f59f00", "#e03131"],
+        color_continuous_scale=["#10b981", "#f59e0b", "#ef4444"],
+        range_color=[0, 100],
         center=center,
         zoom=5.2,
-        title="Latest Sensor Readings",
+        title="Latest Sensor Readings (PM2.5)",
     )
 
     fig.update_layout(
@@ -689,7 +859,10 @@ def update_plots(
         labels=labels,
         title=f"{label} Daily Average",
     )
-    line_fig.update_traces(line={"color": "#2563eb", "width": 3}, marker={"size": 7})
+    line_fig.update_traces(
+        line={"color": "#3b82f6", "width": 3},
+        marker={"size": 7, "color": "#3b82f6"}
+    )
     style_figure(line_fig)
 
     box_fig = px.box(
@@ -701,10 +874,46 @@ def update_plots(
         category_orders={"weekday": WEEKDAY_ORDER},
         title=f"{label} Distribution by Weekday",
     )
-    box_fig.update_traces(marker={"color": "#0f766e", "size": 7}, line={"color": "#134e4a"})
+    box_fig.update_traces(
+        marker={"color": "#10b981", "size": 7},
+        line={"color": "#059669"}
+    )
     style_figure(box_fig)
 
     return line_fig, box_fig
+
+
+@app.callback(
+    Output("download-data", "data"),
+    Input("download-csv", "n_clicks"),
+    [
+        State("location-dropdown", "value"),
+        State("parameter-dropdown", "value"),
+        State("date-picker-range", "start_date"),
+        State("date-picker-range", "end_date"),
+    ],
+    prevent_initial_call=True,
+)
+def download_filtered_data(n_clicks, selected_location, selected_parameter, start_date, end_date):
+    if not n_clicks or not all([selected_location, selected_parameter, start_date, end_date]):
+        return None
+
+    daily_stats_df = get_daily_air_quality_stats()
+    measurement_dates = pd.to_datetime(daily_stats_df["measurement_date"])
+    filtered_df = daily_stats_df[
+        (daily_stats_df["location"] == selected_location)
+        & (daily_stats_df["parameter"] == selected_parameter)
+        & (measurement_dates >= pd.to_datetime(start_date))
+        & (measurement_dates <= pd.to_datetime(end_date))
+    ].copy()
+
+    filename_parameter = selected_parameter.replace(" ", "_")
+    filename_location = selected_location.lower().replace(" ", "_").replace("/", "_")
+    return dcc.send_data_frame(
+        filtered_df.to_csv,
+        f"air_quality_{filename_location}_{filename_parameter}.csv",
+        index=False,
+    )
 
 
 if __name__ == "__main__":

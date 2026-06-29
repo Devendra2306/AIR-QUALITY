@@ -4,4 +4,6 @@ __pycache__/
 *.db
 !air_quality.db
 .env
+.env.local
+.env.*.local
 .ipynb_checkpoints/

@@ -195,7 +195,7 @@ h1 {
 .control-panel {
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 0.8fr) minmax(260px, 1.1fr);
+  grid-template-columns: minmax(220px, 1.3fr) minmax(180px, 0.8fr) minmax(260px, 1fr) minmax(150px, 0.6fr);
   margin-top: 16px;
   padding: 16px;
 }
@@ -219,6 +219,23 @@ h1 {
 .DateInput,
 .DateInput_input {
   background: #ffffff;
+}
+
+.export-button {
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 750;
+  min-height: 38px;
+  padding: 8px 14px;
+  width: 100%;
+}
+
+.export-button:hover {
+  background: #263244;
 }
 
 .graph-grid {
