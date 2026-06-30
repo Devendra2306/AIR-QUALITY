@@ -1,7 +1,7 @@
 import duckdb
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator, Optional
+from typing import Any, Generator, Optional
 from app.config.settings import settings
 from app.config.logging_config import logger
 
@@ -23,7 +23,7 @@ class DatabaseManager:
         finally:
             conn.close()
     
-    def execute_query(self, query: str, params: Optional[dict] = None) -> duckdb.DuckDBPyResult:
+    def execute_query(self, query: str, params: Optional[dict] = None) -> Any:
         """Execute a query and return results."""
         with self.get_connection() as conn:
             if params:

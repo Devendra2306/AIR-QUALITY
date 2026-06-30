@@ -10,14 +10,14 @@ import sys
 from pathlib import Path
 from app.config.settings import settings
 from app.config.logging_config import logger
-from app.dashboard.app import dashboard_app
+from dashboard.app import app as dash_app
 from app.pipeline.orchestrator import PipelineOrchestrator
 
 
 def run_dashboard():
     """Run the dashboard application."""
     logger.info("Starting dashboard application")
-    dashboard_app.run(
+    dash_app.run(
         host=settings.HOST,
         port=settings.PORT,
         debug=settings.DEBUG

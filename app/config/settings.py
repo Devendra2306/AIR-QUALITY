@@ -1,7 +1,10 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import Optional
-import os
+from pathlib import Path
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
@@ -20,7 +23,7 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
     
     # Database
-    DATABASE_PATH: str = "data/air_quality.db"
+    DATABASE_PATH: str = str(PROJECT_ROOT / "air_quality.db")
     DATABASE_POOL_SIZE: int = 10
     DATABASE_MAX_OVERFLOW: int = 20
     

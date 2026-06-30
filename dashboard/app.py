@@ -19,12 +19,40 @@ REFRESH_INTERVAL_MS = 5 * 60 * 1000
 QUALITY_STALE_HOURS = 24
 RAW_TABLE_CANDIDATES = ("air_quality", "air_quality_data")
 PARAMETER_LABELS = {
+    "pm1": "PM1",
     "pm25": "PM2.5",
     "pm10": "PM10",
+    "co": "CO",
+    "co2": "CO2",
+    "no": "NO",
     "no2": "NO2",
     "so2": "SO2",
     "o3": "O3",
+    "nh3": "NH3",
+    "voc": "VOC",
+    "pb": "Lead (Pb)",
+    "temperature": "Temperature",
+    "humidity": "Humidity",
+    "pressure": "Pressure",
+    "windspeed": "Wind Speed",
+    "winddirection": "Wind Direction",
+    "rain": "Rain",
+    "visibility": "Visibility",
+    "uvi": "UV Index",
 }
+AQI_BREAKPOINTS = [
+    (0, 50, "Good", "#22c55e"),
+    (51, 100, "Moderate", "#eab308"),
+    (101, 150, "Unhealthy for Sensitive Groups", "#f97316"),
+    (151, 200, "Unhealthy", "#ef4444"),
+    (201, 300, "Very Unhealthy", "#8b5cf6"),
+    (301, 500, "Hazardous", "#7f1d1d"),
+]
+POLLUTANT_ORDER = [
+    "pm1", "pm25", "pm10", "co", "co2", "no", "no2", "so2", "o3", "nh3",
+    "voc", "pb", "temperature", "humidity", "pressure", "windspeed",
+    "winddirection", "rain", "visibility", "uvi",
+]
 WEEKDAY_ORDER = [
     "Monday",
     "Tuesday",
@@ -42,6 +70,26 @@ with open(LOCATION_PATH, encoding="utf-8") as f:
 
 def parameter_label(parameter: str) -> str:
     return PARAMETER_LABELS.get(parameter, parameter.upper())
+
+
+def aqi_category(value: float | int | None) -> tuple[str, str]:
+    """Return the WHO-style AQI category and color for a numeric AQI value."""
+    if value is None or pd.isna(value):
+        return "No reading", "#94a3b8"
+    for low, high, label, color in AQI_BREAKPOINTS:
+        if low <= float(value) <= high:
+            return label, color
+    return "Hazardous", "#7f1d1d"
+
+
+def estimate_aqi(row: pd.Series) -> float:
+    """Estimate AQI from available particulate readings without fabricating data."""
+    candidates = []
+    for parameter in ("pm25", "pm10"):
+        value = row.get(parameter)
+        if value is not None and not pd.isna(value):
+            candidates.append(float(value))
+    return max(candidates) if candidates else 0.0
 
 
 def empty_figure(message: str, loading: bool = False) -> go.Figure:
@@ -148,9 +196,7 @@ def get_latest_values_per_location() -> pd.DataFrame:
     if raw_df.empty:
         return raw_df
 
-    latest_df = raw_df[
-        raw_df["parameter"].isin(["pm10", "pm25", "so2"])
-    ].sort_values("datetime")
+    latest_df = raw_df.sort_values("datetime")
 
     if latest_df.empty:
         return latest_df
@@ -182,13 +228,18 @@ def get_latest_values_per_location() -> pd.DataFrame:
         how="left",
     )
 
-    for parameter in ["pm10", "pm25", "so2"]:
+    for parameter in POLLUTANT_ORDER:
         if parameter not in latest_values_df:
             latest_values_df[parameter] = None
         latest_values_df[parameter] = pd.to_numeric(
             latest_values_df[parameter],
             errors="coerce",
-        ).fillna(0)
+        )
+
+    latest_values_df["aqi"] = latest_values_df.apply(estimate_aqi, axis=1)
+    categories = latest_values_df["aqi"].apply(aqi_category)
+    latest_values_df["aqi_category"] = categories.apply(lambda item: item[0])
+    latest_values_df["aqi_color"] = categories.apply(lambda item: item[1])
 
     return latest_values_df
 
@@ -247,7 +298,13 @@ def get_data_quality_summary() -> dict:
 
     raw_df["value"] = pd.to_numeric(raw_df["value"], errors="coerce")
     clean_df = raw_df[raw_df["value"].notna() & (raw_df["value"] >= 0)].copy()
-    duplicate_columns = ["location_id", "datetime", "parameter", "sensors_id"]
+    duplicate_columns = [
+        column
+        for column in ["location_id", "datetime", "parameter", "sensors_id", "sensor_id"]
+        if column in raw_df.columns
+    ]
+    if not duplicate_columns:
+        duplicate_columns = ["location_id", "datetime", "parameter"]
     duplicate_records = raw_df.duplicated(subset=duplicate_columns).sum()
     latest_reading = raw_df["datetime"].max()
     latest_by_location = raw_df.groupby("location")["datetime"].max()
@@ -300,6 +357,17 @@ def metric_card(label: str, value: str, accent: str = "blue") -> html.Div:
     )
 
 
+def pollutant_card(parameter: str, value) -> html.Div:
+    display_value = "N/A" if value is None or pd.isna(value) else f"{float(value):.1f}"
+    return html.Div(
+        className="pollutant-card",
+        children=[
+            html.Div(parameter_label(parameter), className="pollutant-label"),
+            html.Div(display_value, className="pollutant-value"),
+        ],
+    )
+
+
 def flow_node(title: str, value: str, accent: str) -> html.Div:
     return html.Div(
         className=f"flow-node flow-node--{accent}",
@@ -334,13 +402,58 @@ app.layout = html.Div(
         ),
         dcc.Download(id="download-data"),
         html.Header(
-            className="topbar",
+            className="hero",
             children=[
                 html.Div(
+                    className="hero-copy",
                     children=[
-                        html.P("Air Quality Pipeline", className="eyebrow"),
-                        html.H1("Monitoring Dashboard"),
+                        html.P("Live air intelligence", className="eyebrow"),
+                        html.H1("Air Quality Monitoring Platform"),
+                        html.P(
+                            "Track real sensor readings, AQI categories, pollutant trends, "
+                            "and data quality from one production dashboard.",
+                            className="hero-text",
+                        ),
                     ]
+                ),
+                html.Section(id="aqi-hero-card", className="aqi-hero-card"),
+            ],
+        ),
+        html.Section(
+            className="toolbar",
+            children=[
+                html.Div(
+                    className="search-control",
+                    children=[
+                        html.Label("Search city or station"),
+                        dcc.Input(
+                            id="global-search",
+                            type="search",
+                            debounce=True,
+                            placeholder="Start typing a location...",
+                        ),
+                    ],
+                ),
+                html.Div(
+                    className="control",
+                    children=[
+                        html.Label("Country"),
+                        dcc.Dropdown(id="country-selector", placeholder="All countries"),
+                    ],
+                ),
+                html.Div(
+                    className="control",
+                    children=[
+                        html.Label("State"),
+                        dcc.Dropdown(id="state-selector", placeholder="All states"),
+                    ],
+                ),
+                html.Div(
+                    className="control",
+                    children=[
+                        html.Label("District"),
+                        dcc.Dropdown(id="district-selector", placeholder="All districts"),
+                    ],
                 ),
                 html.Div(
                     className="status-strip",
@@ -352,6 +465,24 @@ app.layout = html.Div(
             ],
         ),
         html.Section(id="summary-cards", className="metric-grid"),
+        html.Section(id="pollutant-grid", className="pollutant-grid"),
+        html.Section(
+            className="aqi-scale",
+            children=[
+                html.Div("WHO AQI categories", className="panel-title"),
+                html.Div(
+                    className="scale-row",
+                    children=[
+                        html.Div(
+                            className="scale-item",
+                            style={"--scale-color": color},
+                            children=[html.Strong(label), html.Span(f"{low}-{high}")],
+                        )
+                        for low, high, label, color in AQI_BREAKPOINTS
+                    ],
+                ),
+            ],
+        ),
         dcc.Tabs(
             className="tabs",
             parent_className="tabs-wrap",
@@ -374,7 +505,7 @@ app.layout = html.Div(
                     ],
                 ),
                 dcc.Tab(
-                    label="Trends",
+                    label="Analytics",
                     className="tab",
                     selected_className="tab tab--selected",
                     children=[
@@ -491,7 +622,7 @@ app.layout = html.Div(
                     ],
                 ),
                 dcc.Tab(
-                    label="Data Flow",
+                    label="Pipeline",
                     className="tab",
                     selected_className="tab tab--selected",
                     children=[
@@ -513,7 +644,9 @@ app.layout = html.Div(
 
 @app.callback(
     [
+        Output("aqi-hero-card", "children"),
         Output("summary-cards", "children"),
+        Output("pollutant-grid", "children"),
         Output("pipeline-flow", "children"),
         Output("collection-details", "children"),
     ],
@@ -528,9 +661,15 @@ def update_summary(_):
         error_text = str(exc)
         return (
             [
+                html.Div("AQI", className="aqi-label"),
+                html.Div("Error", className="aqi-number"),
+                html.Div(error_text[:80], className="aqi-category"),
+            ],
+            [
                 metric_card("Data Status", "Error", "red"),
                 metric_card("Message", error_text[:46], "amber"),
             ],
+            [pollutant_card(parameter, None) for parameter in POLLUTANT_ORDER],
             [flow_node("Database", "Not available", "red")],
             [html.Div(error_text, className="detail-item detail-item--wide")],
         )
@@ -538,11 +677,17 @@ def update_summary(_):
     if raw_df.empty:
         return (
             [
+                html.Div("AQI", className="aqi-label"),
+                html.Div("N/A", className="aqi-number"),
+                html.Div("Waiting for real sensor data", className="aqi-category"),
+            ],
+            [
                 metric_card("Records", "0", "amber"),
                 metric_card("Locations", "0", "blue"),
                 metric_card("Parameters", "0", "green"),
                 metric_card("Latest Reading", "No data", "red"),
             ],
+            [pollutant_card(parameter, None) for parameter in POLLUTANT_ORDER],
             [
                 flow_node("Source", "OpenAQ archive", "blue"),
                 flow_node("Raw", raw_table_name, "green"),
@@ -563,6 +708,24 @@ def update_summary(_):
         metric_card("Locations", f"{raw_df['location'].nunique():,}", "green"),
         metric_card("Parameters", f"{raw_df['parameter'].nunique():,}", "amber"),
         metric_card("Latest Reading", latest_reading, "red"),
+    ]
+
+    latest_values_df = get_latest_values_per_location()
+    latest_row = latest_values_df.sort_values("datetime").tail(1).iloc[0]
+    category, color = aqi_category(latest_row["aqi"])
+    hero_card = [
+        html.Div("Current AQI", className="aqi-label"),
+        html.Div(f"{latest_row['aqi']:.0f}", className="aqi-number", style={"color": color}),
+        html.Div(category, className="aqi-category"),
+        html.Div(str(latest_row["location"]), className="aqi-location"),
+        html.Div(
+            className="aqi-ring",
+            style={"--aqi-color": color, "--aqi-progress": f"{min(float(latest_row['aqi']) / 500, 1) * 360:.0f}deg"},
+        ),
+    ]
+    pollutant_cards = [
+        pollutant_card(parameter, latest_row.get(parameter))
+        for parameter in POLLUTANT_ORDER
     ]
 
     pipeline_flow = [
@@ -590,7 +753,7 @@ def update_summary(_):
         ),
     ]
 
-    return summary_cards, pipeline_flow, collection_details
+    return hero_card, summary_cards, pollutant_cards, pipeline_flow, collection_details
 
 
 @app.callback(
