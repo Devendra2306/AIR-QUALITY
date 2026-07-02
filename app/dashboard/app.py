@@ -434,6 +434,24 @@ class DashboardApp:
         self.app.run(host=host, port=port, debug=debug)
 
 
+# Auto-initialize database for Render / fresh installs
+try:
+    with db_manager.get_connection() as conn:
+        conn.execute("SELECT 1 FROM presentation.latest_measurements LIMIT 1")
+except Exception:
+    logger.info("Initializing database with mock data...")
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    try:
+        from scripts.mock_data import generate_mock_data
+        from app.pipeline.orchestrator import PipelineOrchestrator
+        generate_mock_data()
+        PipelineOrchestrator()._create_presentation_views()
+        logger.info("Mock data initialization complete.")
+    except Exception as e:
+        logger.error(f"Failed to initialize mock data: {e}")
+
 # Create global app instance
 dashboard_app = DashboardApp()
 app = dashboard_app.app
