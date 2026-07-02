@@ -406,7 +406,7 @@ class DashboardApp:
             """Update location dropdown options."""
             try:
                 query = """
-                SELECT DISTINCT location_id, location
+                SELECT DISTINCT location_id, location_name as location
                 FROM presentation.location_summary
                 ORDER BY location
                 """

@@ -1,6 +1,7 @@
 import httpx
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
+import time
 from app.pipeline.extractors.base_extractor import BaseExtractor
 from app.config.settings import settings
 from app.config.logging_config import logger
