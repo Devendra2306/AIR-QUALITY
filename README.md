@@ -54,10 +54,6 @@ Since this project is still in development, the following features will be added
 - **Enhanced Caching**: Redis caching layers to speed up dashboard load times for large datasets.
 - **Alerting System**: Real-time alerts when AQI thresholds are breached.
 
-## Contributing
 
-Contributions are welcome! Since the project is in its early stages, feel free to open an issue to discuss proposed changes before submitting a pull request.
 
-## License
 
-MIT License
