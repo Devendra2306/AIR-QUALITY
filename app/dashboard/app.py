@@ -447,18 +447,31 @@ try:
     with db_manager.get_connection() as conn:
         conn.execute("SELECT 1 FROM presentation.latest_measurements LIMIT 1")
 except Exception:
-    logger.info("Initializing database with mock data...")
+    logger.info("Initializing database with multi-city sample data for Render...")
     import sys
     from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
     try:
-        from scripts.mock_data import generate_mock_data
-        from app.pipeline.orchestrator import PipelineOrchestrator
-        generate_mock_data()
-        PipelineOrchestrator()._create_presentation_views()
-        logger.info("Mock data initialization complete.")
+        from scripts.generate_sample_dataset import generate_dataset, seed_database_from_dataframe
+        df_init = generate_dataset()
+        seed_database_from_dataframe(df_init)
+        logger.info("Sample data initialization complete.")
     except Exception as e:
-        logger.error(f"Failed to initialize mock data: {e}")
+        logger.error(f"Failed to initialize sample data: {e}")
+
+# Auto-train default ML model if not yet trained
+try:
+    from pathlib import Path
+    model_file = Path(__file__).resolve().parent.parent.parent / "models" / "aqi_model.joblib"
+    if not model_file.exists():
+        from app.ml.model_trainer import ml_trainer
+        data_csv = Path(__file__).resolve().parent.parent.parent / "data" / "sample_air_quality_dataset.csv"
+        if data_csv.exists():
+            df_sample = ml_trainer.load_from_csv(data_csv)
+            ml_trainer.train(df_sample, target_column="aqi", algorithm="random_forest")
+            logger.info("Default ML model trained and ready.")
+except Exception as e:
+    logger.warning(f"Default model auto-training skipped: {e}")
 
 # Create global app instance
 dashboard_app = DashboardApp()

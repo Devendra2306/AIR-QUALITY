@@ -88,9 +88,17 @@ Predict AQI and view health advisories for custom pollutant values:
 python scripts/predict.py --pm25 75.0 --pm10 140.0 --no2 50.0 --so2 18.0 --co 1.2 --o3 35.0
 ```
 
+## 🌐 Cloud Deployment (Render)
+
+The project is fully pre-configured for free cloud deployment on **Render**:
+- Complete step-by-step instructions: **[`docs/RENDER_DEPLOYMENT_GUIDE.md`](docs/RENDER_DEPLOYMENT_GUIDE.md)**
+- Automatic configuration blueprint: **[`render.yaml`](render.yaml)**
+
 ---
 
 ## 📚 College Project Documentation & Viva Voce Guide
 
 Complete report covering system architecture, mathematical formulations, experimental results, and **15+ Viva Voce questions & model answers** is available in:
 - **[`docs/COLLEGE_PROJECT_REPORT.md`](docs/COLLEGE_PROJECT_REPORT.md)**
+- **[`docs/PROJECT_STRUCTURE_GUIDE.md`](docs/PROJECT_STRUCTURE_GUIDE.md)**
+
