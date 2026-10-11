@@ -1,9 +1,31 @@
-secrets.json
+# Virtual Environments
+venv/
+.venv/
+.devv/
+env/
+
+# Python Cache
 __pycache__/
-*.pyc
-*.db
-!air_quality.db
+*.py[cod]
+*$py.class
+*.so
+
+# Environment Variables & Secrets
 .env
 .env.local
 .env.*.local
+secrets.json
+
+# Database & Storage
+*.db-journal
+*.db-wal
+temp/
+exports/
+
+# Jupyter Checkpoints
 .ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# IDEs
+.vscode/
+.idea/

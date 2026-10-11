@@ -8,15 +8,19 @@ It can run the dashboard, API server, or pipeline orchestrator based on command-
 import argparse
 import sys
 from pathlib import Path
+
+# Add project root to Python search path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from app.config.settings import settings
 from app.config.logging_config import logger
-from dashboard.app import app as dash_app
 from app.pipeline.orchestrator import PipelineOrchestrator
 
 
 def run_dashboard():
     """Run the dashboard application."""
     logger.info("Starting dashboard application")
+    from app.dashboard.app import app as dash_app
     dash_app.run(
         host=settings.HOST,
         port=settings.PORT,
@@ -74,6 +78,19 @@ def run_measurement_collection(location_ids: list = None):
     return results
 
 
+def run_model_training():
+    """Run model training."""
+    from scripts.train_model import main as train_main
+    train_main()
+
+
+def run_data_generation():
+    """Generate realistic sample dataset."""
+    from scripts.generate_sample_dataset import generate_dataset, seed_database_from_dataframe
+    df = generate_dataset()
+    seed_database_from_dataframe(df)
+
+
 def main():
     """Main entry point with CLI argument parsing."""
     parser = argparse.ArgumentParser(
@@ -81,17 +98,20 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python app/main.py dashboard              # Run the dashboard
-  python app/main.py pipeline               # Run the full pipeline
-  python app/main.py sync-locations         # Sync locations only
-  python app/main.py collect-measurements   # Collect measurements only
+  python app/main.py                        # Default: Run the dashboard
+  python app/main.py dashboard              # Run the interactive dashboard
+  python app/main.py train-model            # Train Machine Learning model
+  python app/main.py generate-data          # Generate multi-city sample dataset
+  python app/main.py pipeline               # Run the ETL pipeline
         """
     )
     
     parser.add_argument(
         "command",
-        choices=["dashboard", "pipeline", "sync-locations", "collect-measurements"],
-        help="Command to run"
+        nargs="?",
+        default="dashboard",
+        choices=["dashboard", "pipeline", "sync-locations", "collect-measurements", "train-model", "generate-data"],
+        help="Command to run (default: dashboard)"
     )
     
     parser.add_argument(
@@ -118,6 +138,10 @@ Examples:
     try:
         if args.command == "dashboard":
             run_dashboard()
+        elif args.command == "train-model":
+            run_model_training()
+        elif args.command == "generate-data":
+            run_data_generation()
         elif args.command == "pipeline":
             run_pipeline()
         elif args.command == "sync-locations":

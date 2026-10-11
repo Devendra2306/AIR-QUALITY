@@ -1,59 +1,96 @@
-# Air Quality Monitoring System
+# Real-Time Air Quality Monitoring & Machine Learning Pipeline
 
-> **Note:** This project is currently a **Work In Progress (WIP) and remains incomplete**. The core pipeline and visualization components are functional, but several features are still under active development.
+An industry-level, end-to-end air quality monitoring platform and machine learning predictive analytics system built for college minor projects and environmental data analysis.
 
-An industry-level, real-time air quality monitoring platform that collects data from the OpenAQ API, processes it through an ETL pipeline, and visualizes it on an interactive dashboard.
+It automatically ingests live and historical sensor data, processes it through an ETL pipeline into an embedded analytical database (**DuckDB**), trains **Machine Learning models** (Random Forest, Gradient Boosting, Linear Regression) to predict AQI and air severity categories, and visualizes everything on an interactive dashboard.
 
-## Overview
+---
 
-Environmental data is often messy and fragmented. This project aims to automatically ingest live sensor data, clean it, and store it in an optimized analytical database (DuckDB) so it can be presented clearly on a live map and dashboard. 
+## 🌟 Key Features
 
-## Tech Stack
+- **End-to-End ETL Data Pipeline:** Ingestion, validation, quality scoring, and multi-schema loading (Raw, Staging, Presentation).
+- **Embedded Columnar Database (DuckDB):** Ultra-fast analytical aggregations without external database server overhead.
+- **Machine Learning & Predictive Engine:**
+  - **Regression:** Predict continuous Air Quality Index (AQI), $PM_{2.5}$, or $PM_{10}$ with $R^2 > 0.99$.
+  - **Classification:** Predict AQI severity categories (*Good, Satisfactory, Moderate, Poor, Very Poor, Severe*).
+  - **Algorithms Supported:** Random Forest, Gradient Boosting, Linear/Ridge Regression, Decision Trees.
+  - **Custom Dataset Support:** Train models directly by uploading **any CSV dataset** via web interface or CLI.
+  - **Model Persistence:** Automated serialization and loading of trained models (`models/aqi_model.joblib`).
+- **Interactive Visual Analytics Dashboard (Dash & Plotly):**
+  - **Map View:** Interactive OpenStreetMap showing station readings.
+  - **Trend Analysis:** Time-series trends and box-plot distributions.
+  - **Machine Learning & Visuals Tab:**
+    - Actual vs. Predicted scatter plot with 45° ideal fit line.
+    - Feature Importance ranking chart.
+    - Prediction error / residual distribution histogram.
+    - Inter-pollutant correlation heatmap.
+    - Real-Time "What-If" AQI Predictor with interactive gauge meter and health advisories.
+  - **Data Export:** Export data to CSV, JSON, Excel, and Parquet.
 
-- **Python** (Core language)
-- **FastAPI** (REST API)
-- **DuckDB** (Analytical database)
-- **Dash & Plotly** (Interactive web dashboard)
-- **Pydantic** (Data validation)
+---
 
-## Quick Start
+## 🛠 Tech Stack
 
-1. **Clone the repository:**
+- **Core:** Python 3.10+
+- **Data Engineering:** DuckDB, Pandas, NumPy, Polars
+- **Machine Learning:** scikit-learn, joblib
+- **Web Dashboard:** Dash, Plotly, HTML5, CSS3
+- **Data Validation & Settings:** Pydantic
+
+---
+
+## 🚀 Quick Start (Running the Project)
+
+### Option 1: 1-Click Launch on Windows
+Double-click `run.bat` or run in terminal:
+```cmd
+.\run.bat
+```
+
+### Option 2: Running via Python
+1. **Activate virtual environment:**
    ```bash
-   git clone <repository-url>
-   cd air-quality-pipeline
+   .\venv\Scripts\activate
    ```
 
-2. **Install dependencies:**
+2. **Initialize Database & Seed Sample Data:**
    ```bash
-   pip install -r requirements.txt
+   python scripts/generate_sample_dataset.py
    ```
 
-3. **Configure environment:**
+3. **Launch the Dashboard:**
    ```bash
-   cp .env.example .env
-   # Add your OpenAQ API key to .env
-   ```
-
-4. **Initialize and run:**
-   ```bash
-   # Setup database
-   python scripts/setup_db.py
-   
-   # Run the dashboard
    python app/main.py dashboard
    ```
+   Open your browser at: **`http://localhost:8050`**
 
-## Upcoming Features (Planned)
+---
 
-Since this project is still in development, the following features will be added in upcoming releases:
+## 🤖 Training the ML Model via CLI
 
-- **Docker Containerization**: Full Docker Compose setup for easy deployment.
-- **Background Task Processing**: Integration with Celery and Redis to handle data extraction asynchronously.
-- **Authentication**: A fully integrated JWT-based authentication system for API endpoints.
-- **Enhanced Caching**: Redis caching layers to speed up dashboard load times for large datasets.
-- **Alerting System**: Real-time alerts when AQI thresholds are breached.
+You can train the model on any dataset directly from the terminal:
 
+```bash
+# Train Random Forest to predict AQI
+python scripts/train_model.py --dataset data/sample_air_quality_dataset.csv --target aqi --algorithm random_forest
 
+# Train to classify AQI Category
+python scripts/train_model.py --dataset data/sample_air_quality_dataset.csv --target aqi_category --algorithm random_forest
+```
 
+---
 
+## 🔮 Making Live Predictions via CLI
+
+Predict AQI and view health advisories for custom pollutant values:
+
+```bash
+python scripts/predict.py --pm25 75.0 --pm10 140.0 --no2 50.0 --so2 18.0 --co 1.2 --o3 35.0
+```
+
+---
+
+## 📚 College Project Documentation & Viva Voce Guide
+
+Complete report covering system architecture, mathematical formulations, experimental results, and **15+ Viva Voce questions & model answers** is available in:
+- **[`docs/COLLEGE_PROJECT_REPORT.md`](docs/COLLEGE_PROJECT_REPORT.md)**

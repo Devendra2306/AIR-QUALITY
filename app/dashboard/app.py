@@ -19,7 +19,9 @@ from app.dashboard.components.charts import (
     create_box_plot,
     create_bar_chart
 )
+from app.dashboard.components.ml_layout import create_ml_tab_layout
 from app.dashboard.callbacks.map_callbacks import register_map_callbacks
+from app.dashboard.callbacks.ml_callbacks import register_ml_callbacks
 
 
 class DashboardApp:
@@ -145,6 +147,11 @@ class DashboardApp:
                             ]
                         ),
                         create_tab(
+                            label="ML & Visuals",
+                            value="ml-tab",
+                            children=[create_ml_tab_layout()]
+                        ),
+                        create_tab(
                             label="Export",
                             value="export-tab",
                             children=[
@@ -189,6 +196,7 @@ class DashboardApp:
     def _register_callbacks(self):
         """Register all callbacks."""
         register_map_callbacks(self.app)
+        register_ml_callbacks(self.app)
         self._register_summary_callbacks()
         self._register_trend_callbacks()
         self._register_quality_callbacks()
