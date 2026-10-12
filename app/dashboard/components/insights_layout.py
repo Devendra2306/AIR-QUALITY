@@ -47,14 +47,14 @@ def create_insights_tab_layout(city_options: list, station_options: list = None)
                                     "display": "inline-block",
                                     "marginBottom": "8px"
                                 }),
-                                html.H2("Air Quality AI/ML Mini Project Hub", style={
+                                html.H2("Air Quality AI/ML Intelligence Hub", style={
                                     "margin": "0 0 6px 0",
                                     "fontSize": "1.5rem",
                                     "fontWeight": "700",
                                     "color": "#ffffff"
                                 }),
                                 html.P(
-                                    "Empirical validation of 10 prescribed laboratory experiments executed on 419 official Indian CPCB monitoring stations.",
+                                    "Advanced machine learning analytics and heuristic decision support trained on 29,531 daily records across 26 Indian cities.",
                                     style={"margin": "0", "color": "#94a3b8", "fontSize": "0.95rem"}
                                 )
                             ]),
@@ -77,7 +77,7 @@ def create_insights_tab_layout(city_options: list, station_options: list = None)
 
             # SECTION 1: A* SEARCH CLEAN-AIR NAVIGATION
             create_panel(
-                title="Experiment 4: AI Heuristic Search — A* Clean-Air Travel Navigation",
+                title="AI Heuristic Search — A* Clean-Air Travel Navigation Corridor",
                 children=[
                     html.P(
                         "Formulation: Uses the A* pathfinding algorithm where the cost function f(n) = g(n) + h(n) balances physical travel distance (haversine) and ambient pollutant toxicity penalty to route travelers along the cleanest atmospheric corridor.",
@@ -150,10 +150,10 @@ def create_insights_tab_layout(city_options: list, station_options: list = None)
             # SECTION 2: STATISTICAL HYPOTHESIS TESTING (T-TEST)
             html.Div(style={"marginTop": "24px"}),
             create_panel(
-                title="Experiment 5: Statistical Inferential Analysis — Metro vs. Regional Hypothesis Testing",
+                title="Statistical Hypothesis Testing — Indo-Gangetic Basin vs. Coastal Dispersion",
                 children=[
                     html.P(
-                        "Null Hypothesis (H0): Mean AQI in major industrial metropolitan centers equals regional towns. Alternative Hypothesis (H1): Metropolitan AQI is significantly higher due to intense vehicular and power infrastructure density.",
+                        "Null Hypothesis (H₀): Mean AQI in landlocked Indo-Gangetic cities equals coastal/peninsular cities. Alternative Hypothesis (H₁): Indo-Gangetic AQI is significantly higher due to geographic thermal inversion and winter atmospheric stagnation.",
                         style={"color": "#64748b", "marginBottom": "16px"}
                     ),
                     html.Div(id="ttest-metrics-container", style={"marginBottom": "16px"}),
@@ -170,10 +170,10 @@ def create_insights_tab_layout(city_options: list, station_options: list = None)
                 style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(480px, 1fr))", "gap": "20px"},
                 children=[
                     create_panel(
-                        title="Experiment 8: K-Means Unsupervised Zone Clustering",
+                        title="K-Means Unsupervised Zone Clustering",
                         children=[
                             html.P(
-                                "Partitions 419 monitoring stations into 3 distinct environmental risk profiles using multi-pollutant feature vectors (PM2.5, PM10, NO2, SO2, CO).",
+                                "Partitions Indian monitoring stations and cities into 3 distinct environmental risk profiles using multi-pollutant feature vectors (PM2.5, PM10, NO2, SO2, CO).",
                                 style={"color": "#64748b", "marginBottom": "12px"}
                             ),
                             dcc.Loading(
@@ -184,7 +184,7 @@ def create_insights_tab_layout(city_options: list, station_options: list = None)
                         ]
                     ),
                     create_panel(
-                        title="Experiment 8 Validation: The Elbow Method",
+                        title="Cluster Optimization: The Elbow Method (k=3)",
                         children=[
                             html.P(
                                 "Mathematical validation of optimal cluster count (k) by measuring the rate of decrease in within-cluster inertia (sum of squared errors). The inflection point occurs at k = 3.",
@@ -205,10 +205,10 @@ def create_insights_tab_layout(city_options: list, station_options: list = None)
                 style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(480px, 1fr))", "gap": "20px"},
                 children=[
                     create_panel(
-                        title="Experiment 9: 2D Principal Component Analysis (PCA)",
+                        title="2D Principal Component Analysis (Dimensionality Reduction)",
                         children=[
                             html.P(
-                                "Projects 7 criteria pollutant dimensions into a 2D orthogonal subspace while capturing maximum variance (~43%), visually separating severe crisis stations from sub-severe stations.",
+                                "Projects criteria pollutant dimensions into a 2D orthogonal subspace while capturing maximum variance, visually separating severe crisis stations from sub-severe stations.",
                                 style={"color": "#64748b", "marginBottom": "12px"}
                             ),
                             dcc.Loading(
@@ -218,10 +218,10 @@ def create_insights_tab_layout(city_options: list, station_options: list = None)
                         ]
                     ),
                     create_panel(
-                        title="Experiments 6, 7 & 10: Academic Model Leaderboard",
+                        title="Machine Learning Models Benchmark Leaderboard",
                         children=[
                             html.P(
-                                "Comprehensive benchmark comparison across regression and classification algorithms evaluated on the official Indian CPCB test holdout set.",
+                                "Comprehensive benchmark comparison across regression and classification algorithms evaluated on the official Indian test holdout set.",
                                 style={"color": "#64748b", "marginBottom": "12px"}
                             ),
                             html.Div(
@@ -251,41 +251,41 @@ def create_insights_tab_layout(city_options: list, station_options: list = None)
                                                 html.Tr(
                                                     style={"borderBottom": "1px solid #f1f5f9"},
                                                     children=[
-                                                        html.Td(html.B("Linear Regression (Exp 6)"), style={"padding": "10px"}),
+                                                        html.Td(html.B("Linear Regression"), style={"padding": "10px"}),
                                                         html.Td("Continuous AQI", style={"padding": "10px"}),
                                                         html.Td("R² Score / RMSE", style={"padding": "10px"}),
-                                                        html.Td("R² = 0.844 (RMSE: 32.1)", style={"padding": "10px", "color": "#2563eb", "fontWeight": "600"}),
+                                                        html.Td("R² = 0.808 (RMSE: 59.3)", style={"padding": "10px", "color": "#2563eb", "fontWeight": "600"}),
                                                         html.Td(html.Span("Baseline", style={"background": "#e2e8f0", "padding": "2px 8px", "borderRadius": "4px", "fontSize": "0.8rem"}))
                                                     ]
                                                 ),
                                                 html.Tr(
                                                     style={"borderBottom": "1px solid #f1f5f9"},
                                                     children=[
-                                                        html.Td(html.B("Logistic Regression (Exp 7)"), style={"padding": "10px"}),
-                                                        html.Td("Severe Alert Classification", style={"padding": "10px"}),
-                                                        html.Td("Accuracy / F1-Score", style={"padding": "10px"}),
-                                                        html.Td("Acc = 95.2% (F1: 0.946)", style={"padding": "10px", "color": "#10b981", "fontWeight": "600"}),
+                                                        html.Td(html.B("Logistic Regression"), style={"padding": "10px"}),
+                                                        html.Td("Hazard Classification (AQI ≥ 200)", style={"padding": "10px"}),
+                                                        html.Td("Accuracy / ROC-AUC", style={"padding": "10px"}),
+                                                        html.Td("Acc = 94.5% (AUC: 0.982)", style={"padding": "10px", "color": "#10b981", "fontWeight": "600"}),
                                                         html.Td(html.Span("High Precision", style={"background": "#dcfce7", "color": "#166534", "padding": "2px 8px", "borderRadius": "4px", "fontSize": "0.8rem"}))
                                                     ]
                                                 ),
                                                 html.Tr(
                                                     style={"borderBottom": "1px solid #f1f5f9"},
                                                     children=[
-                                                        html.Td(html.B("K-Nearest Neighbors (Exp 7)"), style={"padding": "10px"}),
-                                                        html.Td("Severe Alert Classification", style={"padding": "10px"}),
+                                                        html.Td(html.B("K-Nearest Neighbors (KNN)"), style={"padding": "10px"}),
+                                                        html.Td("Hazard Classification (AQI ≥ 200)", style={"padding": "10px"}),
                                                         html.Td("Accuracy / F1-Score", style={"padding": "10px"}),
-                                                        html.Td("Acc = 88.1% (F1: 0.865)", style={"padding": "10px", "color": "#f59e0b", "fontWeight": "600"}),
-                                                        html.Td(html.Span("Non-Parametric", style={"background": "#fef3c7", "color": "#92400e", "padding": "2px 8px", "borderRadius": "4px", "fontSize": "0.8rem"}))
+                                                        html.Td("Acc = 94.4% (F1: 0.889)", style={"padding": "10px", "color": "#f59e0b", "fontWeight": "600"}),
+                                                        html.Td(html.Span("Instance-Based", style={"background": "#fef3c7", "color": "#92400e", "padding": "2px 8px", "borderRadius": "4px", "fontSize": "0.8rem"}))
                                                     ]
                                                 ),
                                                 html.Tr(
                                                     style={"borderBottom": "1px solid #f1f5f9", "background": "#f0fdf4"},
                                                     children=[
-                                                        html.Td(html.B("Random Forest Regressor (Exp 10)"), style={"padding": "10px"}),
+                                                        html.Td(html.B("Random Forest Regressor"), style={"padding": "10px"}),
                                                         html.Td("Continuous AQI (Production)", style={"padding": "10px"}),
                                                         html.Td("R² Score / RMSE", style={"padding": "10px"}),
-                                                        html.Td("R² = 0.996 (RMSE: 5.02)", style={"padding": "10px", "color": "#15803d", "fontWeight": "700"}),
-                                                        html.Td(html.Span("⭐ Best Model", style={"background": "#bbf7d0", "color": "#14532d", "padding": "2px 8px", "borderRadius": "4px", "fontSize": "0.8rem", "fontWeight": "700"}))
+                                                        html.Td("R² = 0.907 (RMSE: 41.2)", style={"padding": "10px", "color": "#15803d", "fontWeight": "700"}),
+                                                        html.Td(html.Span("⭐ Best Production Model", style={"background": "#bbf7d0", "color": "#14532d", "padding": "2px 8px", "borderRadius": "4px", "fontSize": "0.8rem", "fontWeight": "700"}))
                                                     ]
                                                 )
                                             ])
@@ -297,7 +297,7 @@ def create_insights_tab_layout(city_options: list, station_options: list = None)
                                 style={"marginTop": "16px", "padding": "12px", "background": "#f8fafc", "borderRadius": "8px", "border": "1px solid #e2e8f0"},
                                 children=[
                                     html.B("Key Machine Learning Takeaway: ", style={"color": "#0f172a"}),
-                                    html.Span("The non-linear ensemble Random Forest reduces Root Mean Squared Error from 32.11 (Linear Regression) down to 5.02, successfully capturing non-linear interactions between atmospheric temperature, boundary layer inversion, and particulate buildup.")
+                                    html.Span("The non-linear ensemble Random Forest reduces Root Mean Squared Error from 59.3 (Linear Regression) down to 41.2 (R² = 90.7%), successfully capturing complex photochemical interactions and boundary layer inversions.")
                                 ]
                             )
                         ]
@@ -305,10 +305,10 @@ def create_insights_tab_layout(city_options: list, station_options: list = None)
                 ]
             ),
 
-            # SECTION 6: CAPSTONE MINI PROJECT - REAL-TIME PREDICTOR & POLICY SIMULATOR (EXP 10)
+            # SECTION 6: CAPSTONE MINI PROJECT - REAL-TIME PREDICTOR & POLICY SIMULATOR
             html.Div(style={"marginTop": "24px"}),
             create_panel(
-                title="Experiment 10: Capstone Mini Project — Real-Time AQI Predictor & Decision Support System",
+                title="Real-Time AQI Predictor & Decision Support System",
                 children=[
                     html.Div(
                         style={"background": "#eff6ff", "border": "1px solid #bfdbfe", "borderRadius": "8px", "padding": "14px 18px", "marginBottom": "16px"},
@@ -316,9 +316,7 @@ def create_insights_tab_layout(city_options: list, station_options: list = None)
                             html.Span("⚡ SYNCHRONIZED WITH GOOGLE COLAB: ", style={"color": "#1d4ed8", "fontWeight": "bold"}),
                             html.Span("This live inference engine uses "),
                             html.Code("models/aqi_model.joblib", style={"background": "#dbeafe", "padding": "2px 6px", "borderRadius": "4px", "color": "#1e40af", "fontWeight": "bold"}),
-                            html.Span(" (Random Forest, R² = 0.9962), serialized in Step 10 of "),
-                            html.Code("Air_Quality_AI_ML_Mini_Project_Colab.ipynb", style={"background": "#dbeafe", "padding": "2px 6px", "borderRadius": "4px", "color": "#1e40af"}),
-                            html.Span(". Select any of the 419 official Indian CPCB monitoring stations to auto-fill its real telemetry, or adjust pollutant values to simulate environmental policies.")
+                            html.Span(" (Random Forest, R² = 0.9072), trained on 29,531 daily records across 26 Indian cities. Select any monitoring station to auto-fill its real telemetry, or adjust pollutant values to simulate environmental policies.")
                         ]
                     ),
                     html.Div(

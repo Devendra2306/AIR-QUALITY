@@ -371,7 +371,7 @@ def create_ttest_hypothesis_chart(df: pd.DataFrame) -> Tuple[go.Figure, Dict[str
             'Coastal / Peninsular (Maritime Dispersion)': '#10b981'
         },
         points=False,
-        title=f"Exp 5 Hypothesis Testing: Indo-Gangetic Basin vs. Coastal / Peninsular AQI (t = {t_stat:.2f}, p < 1e-100)",
+        title=f"Statistical Hypothesis Testing: Indo-Gangetic Basin vs. Coastal / Peninsular AQI (t = {t_stat:.2f}, p < 1e-100)",
         labels={'aqi': 'Air Quality Index (AQI)', 'Region': 'Geographical Airshed'}
     )
 
