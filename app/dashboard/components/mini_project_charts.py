@@ -198,38 +198,71 @@ def train_mini_project_models(df: pd.DataFrame) -> Dict[str, Any]:
     - PCA + Linear Regression
     - Random Forest Regressor
     """
-    feature_cols = ["pm25", "pm10", "no2", "so2", "co", "o3", "temperature", "humidity", "wind_speed"]
-    features = [c for c in feature_cols if c in df.columns]
+    from sklearn.impute import SimpleImputer
     
-    X = df[features].copy()
-    y = df["aqi"].copy()
+    # Clean and find features
+    df_clean = df.copy()
+    col_map = {c: str(c).lower().replace(".", "").replace("-", "").strip() for c in df_clean.columns}
+    df_clean = df_clean.rename(columns=col_map)
+    
+    if "aqi" not in df_clean.columns:
+        raise ValueError("The dataset does not contain an 'aqi' target column.")
+        
+    df_clean = df_clean.dropna(subset=["aqi"]).copy()
+    
+    feature_cols = ["pm25", "pm10", "no2", "so2", "co", "o3", "temperature", "humidity", "wind_speed"]
+    features = [c for c in feature_cols if c in df_clean.columns]
+    
+    # If standard pollutant columns are not present, select all valid numeric columns
+    if len(features) < 2:
+        exclude = {"aqi", "id", "year", "month", "day", "hour", "latitude", "longitude"}
+        num_cols = df_clean.select_dtypes(include=[np.number]).columns.tolist()
+        features = [c for c in num_cols if c not in exclude]
+        
+    if not features:
+        raise ValueError("No valid numeric feature columns found to train models.")
+        
+    X = df_clean[features].copy()
+    y = df_clean["aqi"].copy()
+    
+    # Cap samples to 8000 if massive to ensure instant training and low memory on Render
+    if len(X) > 8000:
+        idx = np.random.RandomState(42).choice(len(X), size=8000, replace=False)
+        X = X.iloc[idx].copy()
+        y = y.iloc[idx].copy()
     
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.20, random_state=42
     )
     
-    # 1. Linear Regression Pipeline (Notebook Step 8)
+    # 1. Linear Regression Pipeline with Median Imputer (Notebook Step 8)
     linear_pipeline = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
         ("scaler", StandardScaler()),
         ("model", LinearRegression())
     ])
     linear_pipeline.fit(X_train, y_train)
     lr_pred = linear_pipeline.predict(X_test)
     
-    # 2. PCA + Linear Regression Pipeline (Notebook Step 8)
+    # 2. PCA + Linear Regression Pipeline with Median Imputer (Notebook Step 8)
+    n_comp = min(len(features), 6) if len(features) > 2 else len(features)
     pca_pipeline = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
         ("scaler", StandardScaler()),
-        ("pca", PCA(n_components=0.95, random_state=42)),
+        ("pca", PCA(n_components=min(0.95, n_comp), random_state=42)),
         ("model", LinearRegression())
     ])
     pca_pipeline.fit(X_train, y_train)
     pca_pred = pca_pipeline.predict(X_test)
     pca_step = pca_pipeline.named_steps["pca"]
     
-    # 3. Random Forest Regressor
-    rf_model = RandomForestRegressor(n_estimators=50, max_depth=10, random_state=42, n_jobs=1)
-    rf_model.fit(X_train, y_train)
-    rf_pred = rf_model.predict(X_test)
+    # 3. Random Forest Regressor Pipeline
+    rf_pipeline = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("model", RandomForestRegressor(n_estimators=50, max_depth=10, random_state=42, n_jobs=1))
+    ])
+    rf_pipeline.fit(X_train, y_train)
+    rf_pred = rf_pipeline.predict(X_test)
     
     # Model evaluation metrics (Notebook Step 9)
     def evaluate(actual, predicted):
@@ -260,7 +293,7 @@ def train_mini_project_models(df: pd.DataFrame) -> Dict[str, Any]:
         "pca_variance_ratio": [round(float(v) * 100, 2) for v in pca_step.explained_variance_ratio_],
         "linear_pipeline": linear_pipeline,
         "pca_pipeline": pca_pipeline,
-        "rf_model": rf_model
+        "rf_model": rf_pipeline
     }
 
 

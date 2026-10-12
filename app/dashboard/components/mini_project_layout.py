@@ -200,6 +200,74 @@ def create_mini_project_layout(cities: list) -> html.Div:
                             html.Div(
                                 style={"marginTop": "16px"},
                                 children=[
+                                    # Section: Dataset Source & Custom File Upload
+                                    create_panel(
+                                        title="Step 8: Dataset Configuration & Training Source",
+                                        children=[
+                                            html.Div(
+                                                style={"display": "flex", "flexWrap": "wrap", "gap": "20px", "alignItems": "flex-start"},
+                                                children=[
+                                                    html.Div(
+                                                        style={"flex": "1", "minWidth": "300px"},
+                                                        children=[
+                                                            html.Label("Select Training Data Source:", style={"fontWeight": "600", "fontSize": "0.95rem"}),
+                                                            dcc.RadioItems(
+                                                                id="mini-dataset-source",
+                                                                options=[
+                                                                    {"label": " Built-in Project Dataset (3,133 Indian City Records)", "value": "default"},
+                                                                    {"label": " Upload Custom CSV or ZIP Dataset", "value": "upload"}
+                                                                ],
+                                                                value="default",
+                                                                className="radio-group"
+                                                            ),
+                                                            html.Div(
+                                                                id="mini-upload-container",
+                                                                style={"display": "none", "marginTop": "12px"},
+                                                                children=[
+                                                                    dcc.Upload(
+                                                                        id="mini-csv-upload",
+                                                                        children=html.Div([
+                                                                            html.Span("📂 Drag & Drop or ", style={"fontWeight": "600"}),
+                                                                            html.A("Select CSV or ZIP File", style={"color": "#2563eb", "textDecoration": "underline"})
+                                                                        ]),
+                                                                        accept=".csv,.zip",
+                                                                        style={
+                                                                            "border": "2px dashed #93c5fd",
+                                                                            "borderRadius": "8px",
+                                                                            "padding": "18px",
+                                                                            "textAlign": "center",
+                                                                            "backgroundColor": "#f8fafc",
+                                                                            "cursor": "pointer"
+                                                                        }
+                                                                    ),
+                                                                    html.Div(id="mini-upload-status", style={"marginTop": "8px"})
+                                                                ]
+                                                            )
+                                                        ]
+                                                    ),
+                                                    html.Div(
+                                                        style={"flex": "1", "minWidth": "300px"},
+                                                        children=[
+                                                            html.Div(
+                                                                id="mini-dataset-banner",
+                                                                style={"padding": "14px", "backgroundColor": "#eff6ff", "border": "1px solid #bfdbfe", "borderRadius": "8px", "color": "#1e40af", "fontSize": "0.9rem", "lineHeight": "1.5"},
+                                                                children="Active Source: Built-in Mini Project Dataset (3,133 observations across 6 Indian cities). All models and visuals are trained on this data."
+                                                            ),
+                                                            html.Button(
+                                                                "🚀 Retrain Models on Selected Source",
+                                                                id="mini-retrain-btn",
+                                                                n_clicks=0,
+                                                                className="btn btn-primary",
+                                                                style={"marginTop": "12px", "padding": "10px 18px", "fontWeight": "600", "backgroundColor": "#2563eb", "color": "#ffffff", "borderRadius": "6px", "border": "none", "cursor": "pointer"}
+                                                            ),
+                                                            html.Div(id="mini-retrain-status", style={"marginTop": "8px"})
+                                                        ]
+                                                    )
+                                                ]
+                                            )
+                                        ]
+                                    ),
+                                    
                                     create_panel(
                                         title="Step 9: Comparative Model Performance Evaluation",
                                         children=[
