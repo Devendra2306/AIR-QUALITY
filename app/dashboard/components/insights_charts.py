@@ -273,8 +273,11 @@ def create_kmeans_clusters_chart(df: pd.DataFrame) -> Tuple[go.Figure, pd.DataFr
     }).round(1).reset_index()
     summary_df.columns = ['Cluster Tier', 'Station Count', 'Mean PM2.5', 'Mean PM10', 'Mean NO2', 'Mean CO', 'Mean AQI']
 
+    # Sample up to 1,200 points for Plotly JSON trace to keep memory low (<1MB vs 40MB)
+    scatter_df = df_clean.sample(1200, random_state=42) if len(df_clean) > 1200 else df_clean
+
     fig = px.scatter(
-        df_clean,
+        scatter_df,
         x='pm25',
         y='pm10',
         color='cluster_label',
@@ -285,7 +288,7 @@ def create_kmeans_clusters_chart(df: pd.DataFrame) -> Tuple[go.Figure, pd.DataFr
             'Tier 2: High Particulate / Urban': '#f59e0b',
             'Tier 3: Severe Smog Emergency': '#ef4444'
         },
-        title="Unsupervised K-Means Clustering (k=3) of 419 Indian CPCB Stations",
+        title="Unsupervised K-Means Clustering (k=3) - Pollution Severity Distribution",
         labels={'pm25': 'PM2.5 Concentration (µg/m³)', 'pm10': 'PM10 Concentration (µg/m³)'}
     )
 
@@ -412,8 +415,11 @@ def create_pca_2d_chart(df: pd.DataFrame) -> go.Figure:
 
     var_ratio = pca.explained_variance_ratio_
 
+    # Sample up to 1,200 points for Plotly JSON trace to keep memory low (<1MB vs 40MB)
+    scatter_df = df_clean.sample(1200, random_state=42) if len(df_clean) > 1200 else df_clean
+
     fig = px.scatter(
-        df_clean,
+        scatter_df,
         x='PC1',
         y='PC2',
         color='Severe Alert',

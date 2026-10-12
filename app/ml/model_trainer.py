@@ -167,34 +167,40 @@ class AirQualityMLTrainer:
         # Prepare features
         X, y, features = self.prepare_features(df, target_column, task_type=task_type)
         
+        # Cap training dataset to 10,000 samples to keep memory strictly under 512MB on Render
+        if len(X) > 10000:
+            sample_idx = np.random.RandomState(random_state).choice(len(X), size=10000, replace=False)
+            X = X[sample_idx]
+            y = y[sample_idx]
+
         # Train / Test split
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=random_state
         )
         
-        # Instantiate Model
+        # Instantiate Model with n_jobs=1 and memory-lean parameters
         if task_type == "regression":
             if algorithm == "random_forest":
-                model = RandomForestRegressor(n_estimators=100, max_depth=12, random_state=random_state, n_jobs=-1)
+                model = RandomForestRegressor(n_estimators=50, max_depth=10, random_state=random_state, n_jobs=1)
             elif algorithm == "gradient_boosting":
-                model = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=5, random_state=random_state)
+                model = GradientBoostingRegressor(n_estimators=50, learning_rate=0.1, max_depth=4, random_state=random_state)
             elif algorithm == "linear_regression":
                 model = Ridge(alpha=1.0)
             elif algorithm == "decision_tree":
                 model = DecisionTreeRegressor(max_depth=8, random_state=random_state)
             else:
-                model = RandomForestRegressor(n_estimators=100, random_state=random_state)
+                model = RandomForestRegressor(n_estimators=50, max_depth=10, random_state=random_state, n_jobs=1)
         else:
             if algorithm == "random_forest":
-                model = RandomForestClassifier(n_estimators=100, max_depth=12, random_state=random_state, n_jobs=-1)
+                model = RandomForestClassifier(n_estimators=50, max_depth=10, random_state=random_state, n_jobs=1)
             elif algorithm == "gradient_boosting":
-                model = GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=5, random_state=random_state)
+                model = GradientBoostingClassifier(n_estimators=50, learning_rate=0.1, max_depth=4, random_state=random_state)
             elif algorithm == "logistic_regression":
-                model = LogisticRegression(max_iter=1000, random_state=random_state)
+                model = LogisticRegression(max_iter=500, random_state=random_state)
             elif algorithm == "decision_tree":
                 model = DecisionTreeClassifier(max_depth=8, random_state=random_state)
             else:
-                model = RandomForestClassifier(n_estimators=100, random_state=random_state)
+                model = RandomForestClassifier(n_estimators=50, max_depth=10, random_state=random_state, n_jobs=1)
                 
         # Train
         model.fit(X_train, y_train)
@@ -314,6 +320,10 @@ class AirQualityMLTrainer:
         
         # Save model automatically
         self.save_model()
+
+        # Free temporary training arrays
+        import gc
+        gc.collect()
         
         return self.train_results
 

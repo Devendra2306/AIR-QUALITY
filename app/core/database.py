@@ -17,7 +17,7 @@ class DatabaseManager:
     @contextmanager
     def get_connection(self) -> Generator[duckdb.DuckDBPyConnection, None, None]:
         """Get database connection with context manager."""
-        conn = duckdb.connect(str(self.db_path))
+        conn = duckdb.connect(str(self.db_path), config={'max_memory': '64MB', 'threads': '1'})
         try:
             yield conn
         finally:

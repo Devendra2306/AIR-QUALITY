@@ -47,8 +47,15 @@ CITY_STATES = {
 }
 
 
+_CACHED_INSIGHTS_DF = None
+
+
 def get_insights_dataframe() -> pd.DataFrame:
-    """Load the official Indian cities air quality dataset."""
+    """Load the official Indian cities air quality dataset (cached in-memory)."""
+    global _CACHED_INSIGHTS_DF
+    if _CACHED_INSIGHTS_DF is not None:
+        return _CACHED_INSIGHTS_DF
+
     city_day_path = os.path.join(PROJECT_ROOT, "data", "city_day.csv")
     if os.path.exists(city_day_path):
         df = pd.read_csv(city_day_path)
@@ -64,7 +71,15 @@ def get_insights_dataframe() -> pd.DataFrame:
         df['temperature'] = 26.0
         df['humidity'] = 60.0
         df['wind_speed'] = 8.0
-        return df
+
+        # Downcast float columns to float32 to save RAM
+        float_cols = ['pm25', 'pm10', 'no', 'no2', 'nox', 'nh3', 'co', 'so2', 'o3', 'aqi', 'latitude', 'longitude']
+        for col in float_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').astype('float32')
+
+        _CACHED_INSIGHTS_DF = df
+        return _CACHED_INSIGHTS_DF
 
     candidates = [
         os.path.join(PROJECT_ROOT, "data", "cpcb_india_air_quality_pivoted.csv"),
@@ -73,11 +88,14 @@ def get_insights_dataframe() -> pd.DataFrame:
     ]
     for p in candidates:
         if os.path.exists(p):
-            return pd.read_csv(p)
-    return pd.DataFrame([
+            _CACHED_INSIGHTS_DF = pd.read_csv(p)
+            return _CACHED_INSIGHTS_DF
+
+    _CACHED_INSIGHTS_DF = pd.DataFrame([
         {'city': 'Delhi', 'state': 'Delhi', 'latitude': 28.61, 'longitude': 77.20, 'aqi': 259.5, 'pm25': 117.2, 'pm10': 232.8, 'no2': 50.8, 'so2': 15.9, 'co': 2.0, 'station': 'Delhi Central Observatory'},
         {'city': 'Bengaluru', 'state': 'Karnataka', 'latitude': 12.97, 'longitude': 77.59, 'aqi': 94.3, 'pm25': 35.5, 'pm10': 78.0, 'no2': 22.0, 'so2': 9.0, 'co': 0.9, 'station': 'Bengaluru Central Observatory'}
     ])
+    return _CACHED_INSIGHTS_DF
 
 
 def register_insights_callbacks(app):
