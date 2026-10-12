@@ -1,6 +1,6 @@
 """
 Mini Project Dashboard Layout
-Complete single-app UI showcasing the Air Quality Index (AQI) Analysis Mini Project
+Complete UI showcasing the Air Quality Index (AQI) Analysis Mini Project
 matching the Colab notebook: 'mini project final set/Air_Quality_Mini_Project_India_Dataset (1).ipynb'
 """
 
@@ -123,153 +123,86 @@ def create_mini_project_layout(cities: list) -> html.Div:
             # Main Project Tabs
             dcc.Tabs(
                 id="mini-project-tabs",
-                value="tab-eda",
+                value="tab-ml",
                 children=[
-                    # TAB 1: Exploratory Data Analysis (Steps 1 to 7)
+                    # TAB 1: ML & Visuals (Model Training, PCA & Upload)
                     create_tab(
-                        label="📊 Steps 1–7: Exploratory Data Analysis & Trends",
-                        value="tab-eda",
-                        children=[
-                            # Section 1: AQI Distribution & Category Breakdown
-                            html.Div(
-                                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(450px, 1fr))", "gap": "16px", "marginTop": "16px"},
-                                children=[
-                                    create_panel(
-                                        title="Step 4: Air Quality Index (AQI) Distribution & Spread",
-                                        children=[dcc.Graph(id="chart-aqi-dist", config={"displaylogo": False})]
-                                    ),
-                                    create_panel(
-                                        title="Step 4: AQI Category Proportions (CPCB Standard)",
-                                        children=[dcc.Graph(id="chart-category-pie", config={"displaylogo": False})]
-                                    )
-                                ]
-                            ),
-                            
-                            # Section 2: Criteria Pollutant Severity Breakdown
-                            html.Div(
-                                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(450px, 1fr))", "gap": "16px", "marginTop": "16px"},
-                                children=[
-                                    create_panel(
-                                        title="Step 5: Criteria Pollutants Mean Concentrations",
-                                        children=[dcc.Graph(id="chart-pollutant-means", config={"displaylogo": False})]
-                                    ),
-                                    create_panel(
-                                        title="Step 5: Urban Airshed Severity Comparison (PM2.5 / PM10 / AQI)",
-                                        children=[dcc.Graph(id="chart-city-pollutants", config={"displaylogo": False})]
-                                    )
-                                ]
-                            ),
-                            
-                            # Section 3: Longitudinal Trends & Correlation Heatmap
-                            html.Div(
-                                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(450px, 1fr))", "gap": "16px", "marginTop": "16px"},
-                                children=[
-                                    create_panel(
-                                        title="Step 6: AQI Over Time (Temporal Trajectory)",
-                                        children=[
-                                            html.Div(
-                                                style={"display": "flex", "alignItems": "center", "gap": "12px", "marginBottom": "12px"},
-                                                children=[
-                                                    html.Label("Filter Urban Airshed:", style={"fontWeight": "600", "fontSize": "0.9rem"}),
-                                                    dcc.Dropdown(
-                                                        id="mini-trend-city",
-                                                        options=[{"label": "All Urban Airsheds (Aggregate)", "value": "ALL"}] + city_options,
-                                                        value="ALL",
-                                                        clearable=False,
-                                                        style={"width": "260px"}
-                                                    )
-                                                ]
-                                            ),
-                                            dcc.Graph(id="chart-temporal-trend", config={"displaylogo": False})
-                                        ]
-                                    ),
-                                    create_panel(
-                                        title="Step 7: Inter-Pollutant & Weather Correlation Matrix",
-                                        children=[dcc.Graph(id="chart-correlation-heatmap", config={"displaylogo": False})]
-                                    )
-                                ]
-                            )
-                        ]
-                    ),
-                    
-                    # TAB 2: Machine Learning & PCA (Steps 8 to 10)
-                    create_tab(
-                        label="🤖 Steps 8–10: ML Models & PCA Dimensionality Reduction",
+                        label="🤖 ML & Visuals (Model Training & Upload)",
                         value="tab-ml",
                         children=[
                             html.Div(
                                 style={"marginTop": "16px"},
                                 children=[
-                                    # Section: Dataset Source & Custom File Upload
+                                    # Section: Dataset Source & Custom File Upload Dropzone
                                     create_panel(
-                                        title="Step 8: Dataset Configuration & Training Source",
+                                        title="1. Dataset Configuration & File Upload",
                                         children=[
                                             html.Div(
-                                                style={"display": "flex", "flexWrap": "wrap", "gap": "20px", "alignItems": "flex-start"},
+                                                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(320px, 1fr))", "gap": "20px", "alignItems": "center"},
                                                 children=[
-                                                    html.Div(
-                                                        style={"flex": "1", "minWidth": "300px"},
-                                                        children=[
-                                                            html.Label("Select Training Data Source:", style={"fontWeight": "600", "fontSize": "0.95rem"}),
-                                                            dcc.RadioItems(
-                                                                id="mini-dataset-source",
-                                                                options=[
-                                                                    {"label": " Built-in Project Dataset (3,133 Indian City Records)", "value": "default"},
-                                                                    {"label": " Upload Custom CSV or ZIP Dataset", "value": "upload"}
-                                                                ],
-                                                                value="default",
-                                                                className="radio-group"
-                                                            ),
-                                                            html.Div(
-                                                                id="mini-upload-container",
-                                                                style={"display": "none", "marginTop": "12px"},
-                                                                children=[
-                                                                    dcc.Upload(
-                                                                        id="mini-csv-upload",
-                                                                        children=html.Div([
-                                                                            html.Span("📂 Drag & Drop or ", style={"fontWeight": "600"}),
-                                                                            html.A("Select CSV or ZIP File", style={"color": "#2563eb", "textDecoration": "underline"})
-                                                                        ]),
-                                                                        accept=".csv,.zip",
-                                                                        style={
-                                                                            "border": "2px dashed #93c5fd",
-                                                                            "borderRadius": "8px",
-                                                                            "padding": "18px",
-                                                                            "textAlign": "center",
-                                                                            "backgroundColor": "#f8fafc",
-                                                                            "cursor": "pointer"
-                                                                        }
-                                                                    ),
-                                                                    html.Div(id="mini-upload-status", style={"marginTop": "8px"})
-                                                                ]
-                                                            )
-                                                        ]
-                                                    ),
-                                                    html.Div(
-                                                        style={"flex": "1", "minWidth": "300px"},
-                                                        children=[
-                                                            html.Div(
-                                                                id="mini-dataset-banner",
-                                                                style={"padding": "14px", "backgroundColor": "#eff6ff", "border": "1px solid #bfdbfe", "borderRadius": "8px", "color": "#1e40af", "fontSize": "0.9rem", "lineHeight": "1.5"},
-                                                                children="Active Source: Built-in Mini Project Dataset (3,133 observations across 6 Indian cities). All models and visuals are trained on this data."
-                                                            ),
-                                                            html.Button(
-                                                                "🚀 Retrain Models on Selected Source",
-                                                                id="mini-retrain-btn",
-                                                                n_clicks=0,
-                                                                className="btn btn-primary",
-                                                                style={"marginTop": "12px", "padding": "10px 18px", "fontWeight": "600", "backgroundColor": "#2563eb", "color": "#ffffff", "borderRadius": "6px", "border": "none", "cursor": "pointer"}
-                                                            ),
-                                                            html.Div(id="mini-retrain-status", style={"marginTop": "8px"})
-                                                        ]
-                                                    )
+                                                    # Left: Upload Dropzone
+                                                    html.Div([
+                                                        html.Label("Upload Custom Dataset (CSV or ZIP):", style={"fontWeight": "600", "fontSize": "0.95rem", "marginBottom": "8px", "display": "block"}),
+                                                        dcc.Upload(
+                                                            id="mini-csv-upload",
+                                                            children=html.Div([
+                                                                html.Div("📂", style={"fontSize": "1.8rem", "marginBottom": "6px"}),
+                                                                html.Div([
+                                                                    html.Span("Drag & Drop or ", style={"fontWeight": "600", "color": "#0f172a"}),
+                                                                    html.Span("Click to Select File", style={"color": "#2563eb", "fontWeight": "700", "textDecoration": "underline"})
+                                                                ]),
+                                                                html.Div("Supports .csv and .zip archives (auto-decompresses)", style={"fontSize": "0.8rem", "color": "#64748b", "marginTop": "4px"})
+                                                            ]),
+                                                            accept=".csv,.zip",
+                                                            style={
+                                                                "border": "2px dashed #93c5fd",
+                                                                "borderRadius": "8px",
+                                                                "padding": "24px 16px",
+                                                                "textAlign": "center",
+                                                                "backgroundColor": "#f8fafc",
+                                                                "cursor": "pointer",
+                                                                "transition": "border-color 0.2s"
+                                                            }
+                                                        )
+                                                    ]),
+                                                    
+                                                    # Right: Dataset Status & Controls
+                                                    html.Div([
+                                                        html.Label("Active Training Data Source:", style={"fontWeight": "600", "fontSize": "0.95rem", "marginBottom": "8px", "display": "block"}),
+                                                        html.Div(
+                                                            id="mini-dataset-banner",
+                                                            style={"padding": "14px 16px", "backgroundColor": "#eff6ff", "border": "1px solid #bfdbfe", "borderRadius": "8px", "color": "#1e40af", "fontSize": "0.9rem", "lineHeight": "1.5"},
+                                                            children="Active Source: Built-in Mini Project Dataset (3,133 observations across 6 Indian cities). All models and visuals are trained on this data."
+                                                        ),
+                                                        html.Div(
+                                                            style={"display": "flex", "gap": "10px", "marginTop": "12px", "flexWrap": "wrap"},
+                                                            children=[
+                                                                html.Button(
+                                                                    "🔄 Reset to Built-in Dataset",
+                                                                    id="mini-reset-btn",
+                                                                    n_clicks=0,
+                                                                    className="btn btn-secondary",
+                                                                    style={"padding": "9px 16px", "fontSize": "0.85rem", "fontWeight": "600", "backgroundColor": "#475569", "color": "#ffffff", "borderRadius": "6px", "border": "none", "cursor": "pointer"}
+                                                                ),
+                                                                html.Button(
+                                                                    "🚀 Retrain Models",
+                                                                    id="mini-retrain-btn",
+                                                                    n_clicks=0,
+                                                                    className="btn btn-primary",
+                                                                    style={"padding": "9px 18px", "fontSize": "0.85rem", "fontWeight": "600", "backgroundColor": "#2563eb", "color": "#ffffff", "borderRadius": "6px", "border": "none", "cursor": "pointer"}
+                                                                )
+                                                            ]
+                                                        ),
+                                                        html.Div(id="mini-upload-status", style={"marginTop": "8px"})
+                                                    ])
                                                 ]
                                             )
                                         ]
                                     ),
                                     
+                                    # Section 2: Model Comparison Table
                                     create_panel(
-                                        title="Step 9: Comparative Model Performance Evaluation",
+                                        title="2. Comparative Model Performance Evaluation",
                                         children=[
                                             html.P(
                                                 "Rigorous comparison between Standard Linear Regression, PCA (95% Variance Retained) + Linear Regression, and Random Forest Regressor on hold-out test set (20% split).",
@@ -279,11 +212,12 @@ def create_mini_project_layout(cities: list) -> html.Div:
                                         ]
                                     ),
                                     
+                                    # Section 3: Actual vs Predicted Scatter & PCA Scree Plot
                                     html.Div(
                                         style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(450px, 1fr))", "gap": "16px", "marginTop": "16px"},
                                         children=[
                                             create_panel(
-                                                title="Step 10: Actual vs. Predicted AQI (with Ideal Prediction Line)",
+                                                title="3. Actual vs. Predicted AQI (with Ideal Prediction Line)",
                                                 children=[
                                                     html.Div(
                                                         style={"display": "flex", "alignItems": "center", "gap": "12px", "marginBottom": "12px"},
@@ -305,7 +239,7 @@ def create_mini_project_layout(cities: list) -> html.Div:
                                                 ]
                                             ),
                                             create_panel(
-                                                title="Step 8: PCA Scree Plot — Explained Variance Ratio",
+                                                title="4. PCA Scree Plot — Explained Variance Ratio",
                                                 children=[dcc.Graph(id="chart-pca-scree", config={"displaylogo": False})]
                                             )
                                         ]
@@ -315,9 +249,76 @@ def create_mini_project_layout(cities: list) -> html.Div:
                         ]
                     ),
                     
+                    # TAB 2: Exploratory Data Analysis & Trends
+                    create_tab(
+                        label="📊 EDA & Trends",
+                        value="tab-eda",
+                        children=[
+                            # Section 1: AQI Distribution & Category Breakdown
+                            html.Div(
+                                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(450px, 1fr))", "gap": "16px", "marginTop": "16px"},
+                                children=[
+                                    create_panel(
+                                        title="Air Quality Index (AQI) Distribution & Spread",
+                                        children=[dcc.Graph(id="chart-aqi-dist", config={"displaylogo": False})]
+                                    ),
+                                    create_panel(
+                                        title="AQI Category Proportions (CPCB Standard)",
+                                        children=[dcc.Graph(id="chart-category-pie", config={"displaylogo": False})]
+                                    )
+                                ]
+                            ),
+                            
+                            # Section 2: Criteria Pollutant Severity Breakdown
+                            html.Div(
+                                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(450px, 1fr))", "gap": "16px", "marginTop": "16px"},
+                                children=[
+                                    create_panel(
+                                        title="Criteria Pollutants Mean Concentrations",
+                                        children=[dcc.Graph(id="chart-pollutant-means", config={"displaylogo": False})]
+                                    ),
+                                    create_panel(
+                                        title="Urban Airshed Severity Comparison (PM2.5 / PM10 / AQI)",
+                                        children=[dcc.Graph(id="chart-city-pollutants", config={"displaylogo": False})]
+                                    )
+                                ]
+                            ),
+                            
+                            # Section 3: Longitudinal Trends & Correlation Heatmap
+                            html.Div(
+                                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(450px, 1fr))", "gap": "16px", "marginTop": "16px"},
+                                children=[
+                                    create_panel(
+                                        title="AQI Over Time (Temporal Trajectory)",
+                                        children=[
+                                            html.Div(
+                                                style={"display": "flex", "alignItems": "center", "gap": "12px", "marginBottom": "12px"},
+                                                children=[
+                                                    html.Label("Filter Urban Airshed:", style={"fontWeight": "600", "fontSize": "0.9rem"}),
+                                                    dcc.Dropdown(
+                                                        id="mini-trend-city",
+                                                        options=[{"label": "All Urban Airsheds (Aggregate)", "value": "ALL"}] + city_options,
+                                                        value="ALL",
+                                                        clearable=False,
+                                                        style={"width": "260px"}
+                                                    )
+                                                ]
+                                            ),
+                                            dcc.Graph(id="chart-temporal-trend", config={"displaylogo": False})
+                                        ]
+                                    ),
+                                    create_panel(
+                                        title="Inter-Pollutant & Weather Correlation Matrix",
+                                        children=[dcc.Graph(id="chart-correlation-heatmap", config={"displaylogo": False})]
+                                    )
+                                ]
+                            )
+                        ]
+                    ),
+                    
                     # TAB 3: Live AQI Prediction Simulator
                     create_tab(
-                        label="⚡ Live AQI Prediction Simulator",
+                        label="⚡ Live AQI Predictor",
                         value="tab-sim",
                         children=[
                             html.Div(
@@ -392,16 +393,16 @@ def create_mini_project_layout(cities: list) -> html.Div:
                         ]
                     ),
                     
-                    # TAB 4: Colab Notebook & Key Insights (Step 11)
+                    # TAB 4: Colab Notebook & Key Insights
                     create_tab(
-                        label="📘 Step 11: Project Conclusions & Colab Reference",
+                        label="📘 Colab Notebook & Guide",
                         value="tab-notes",
                         children=[
                             html.Div(
                                 style={"marginTop": "16px"},
                                 children=[
                                     create_panel(
-                                        title="Step 11: Key Academic Findings & Conclusions",
+                                        title="Key Academic Findings & Methodological Reference",
                                         children=[
                                             html.Div(
                                                 style={"background": "#f8fafc", "border": "1px solid #e2e8f0", "borderRadius": "8px", "padding": "20px", "marginBottom": "20px"},

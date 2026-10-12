@@ -12,6 +12,7 @@ from pathlib import Path
 from datetime import datetime
 import pandas as pd
 import numpy as np
+import dash
 from dash import Input, Output, State, html
 
 from app.config.logging_config import logger
@@ -34,8 +35,8 @@ from app.dashboard.components.mini_project_charts import (
 # In-memory storage for datasets and precomputed models
 _MINI_DF = None
 _DEFAULT_MODELS = None
-_UPLOADED_DF = None
-_UPLOADED_FILENAME = None
+_ACTIVE_DF = None
+_ACTIVE_FILENAME = None
 _ACTIVE_MODELS = None
 
 
@@ -100,76 +101,28 @@ def parse_uploaded_contents(contents: str, filename: str) -> pd.DataFrame:
     return df
 
 
-def get_mini_project_models() -> dict:
-    """Get active trained models in memory."""
-    global _ACTIVE_MODELS, _DEFAULT_MODELS
-    if _ACTIVE_MODELS is not None:
-        return _ACTIVE_MODELS
+def get_default_models() -> dict:
+    """Get or train the default models."""
+    global _DEFAULT_MODELS
     if _DEFAULT_MODELS is not None:
-        _ACTIVE_MODELS = _DEFAULT_MODELS
-        return _ACTIVE_MODELS
-        
+        return _DEFAULT_MODELS
     df = get_mini_project_df()
     _DEFAULT_MODELS = train_mini_project_models(df)
-    _ACTIVE_MODELS = _DEFAULT_MODELS
-    return _ACTIVE_MODELS
+    return _DEFAULT_MODELS
+
+
+def get_active_models() -> dict:
+    """Get currently active models."""
+    global _ACTIVE_MODELS
+    if _ACTIVE_MODELS is not None:
+        return _ACTIVE_MODELS
+    return get_default_models()
 
 
 def register_mini_project_callbacks(app):
     """Register all Mini Project callbacks."""
-    
-    # 1. Dataset Source Toggle
-    @app.callback(
-        [Output("mini-upload-container", "style"),
-         Output("mini-dataset-banner", "children")],
-        Input("mini-dataset-source", "value")
-    )
-    def toggle_dataset_source(source):
-        """Toggle file upload dropzone and info banner based on selected dataset."""
-        global _UPLOADED_DF, _UPLOADED_FILENAME
-        if source == "upload":
-            if _UPLOADED_DF is not None:
-                banner = f"Active Upload: {_UPLOADED_FILENAME} ({len(_UPLOADED_DF):,} records). Click 'Retrain Models' to train on this dataset."
-            else:
-                banner = "Please upload your CSV or ZIP dataset file below. The models and visuals will dynamically retrain on your uploaded data."
-            return {"display": "block", "marginTop": "12px"}, banner
-        else:
-            banner = "Active Source: Built-in Mini Project Dataset (3,133 observations across 6 Indian cities). All models and visuals are trained on this data."
-            return {"display": "none"}, banner
 
-    # 2. File Upload Handler
-    @app.callback(
-        Output("mini-upload-status", "children"),
-        Input("mini-csv-upload", "contents"),
-        State("mini-csv-upload", "filename")
-    )
-    def handle_upload(contents, filename):
-        """Handle uploaded CSV or ZIP file."""
-        global _UPLOADED_DF, _UPLOADED_FILENAME
-        if not contents or not filename:
-            return ""
-            
-        try:
-            df = parse_uploaded_contents(contents, filename)
-            _UPLOADED_DF = df
-            _UPLOADED_FILENAME = filename
-            cols_preview = ", ".join(list(df.columns)[:5])
-            if len(df.columns) > 5:
-                cols_preview += f" (+{len(df.columns) - 5} more)"
-                
-            return html.Div([
-                html.Div([
-                    html.Span("✓ Successfully loaded: ", style={"color": "#16a34a", "fontWeight": "bold"}),
-                    html.Span(f"{filename} ({len(df):,} rows, {len(df.columns)} columns)", style={"fontWeight": "600", "color": "#0f172a"})
-                ]),
-                html.Div(f"Columns: {cols_preview}", style={"fontSize": "0.8rem", "color": "#64748b", "marginTop": "2px"}),
-                html.Div("Ready! Click '🚀 Retrain Models on Selected Source' below to evaluate your data.", style={"fontSize": "0.85rem", "color": "#2563eb", "marginTop": "4px", "fontWeight": "500"})
-            ], style={"marginTop": "8px", "padding": "10px", "backgroundColor": "#f0fdf4", "borderRadius": "6px", "border": "1px solid #bbf7d0"})
-        except Exception as e:
-            logger.error(f"Failed to parse uploaded file: {e}")
-            return html.Div(f"✗ Failed to read file: {str(e)}", style={"color": "#ef4444", "marginTop": "8px", "fontWeight": "bold", "fontSize": "0.85rem"})
-
-    # 3. EDA Tab Charts
+    # 1. EDA Tab Charts
     @app.callback(
         [Output("chart-aqi-dist", "figure"),
          Output("chart-category-pie", "figure"),
@@ -180,7 +133,7 @@ def register_mini_project_callbacks(app):
     )
     def render_eda_charts(_):
         """Render all EDA charts for Tab 1."""
-        df = get_mini_project_df()
+        df = _ACTIVE_DF if _ACTIVE_DF is not None else get_mini_project_df()
         fig_dist = create_aqi_distribution_chart(df)
         fig_pie = create_category_pie_chart(df)
         fig_means = create_pollutant_levels_chart(df)
@@ -188,69 +141,84 @@ def register_mini_project_callbacks(app):
         fig_corr = create_correlation_heatmap(df)
         return fig_dist, fig_pie, fig_means, fig_city, fig_corr
 
-    # 4. Temporal Trends Filter
+    # 2. Temporal Trends Filter
     @app.callback(
         Output("chart-temporal-trend", "figure"),
         Input("mini-trend-city", "value")
     )
     def update_temporal_trend(selected_city):
         """Update temporal trend chart based on selected city filter."""
-        df = get_mini_project_df()
+        df = _ACTIVE_DF if _ACTIVE_DF is not None else get_mini_project_df()
         filter_city = None if selected_city == "ALL" else selected_city
         return create_temporal_trends_chart(df, city=filter_city)
 
-    # 5. ML Tab & Model Retraining
+    # 3. ML & Visuals Tab: Reactive Upload, Retrain, Model Comparison & Scatter
     @app.callback(
         [Output("mini-model-comparison-table", "children"),
          Output("chart-actual-vs-pred", "figure"),
          Output("chart-pca-scree", "figure"),
-         Output("mini-retrain-status", "children"),
+         Output("mini-upload-status", "children"),
+         Output("mini-dataset-banner", "children"),
          Output("mini-kpi-cards", "children")],
         [Input("mini-project-tabs", "value"),
          Input("mini-model-select", "value"),
+         Input("mini-csv-upload", "contents"),
+         Input("mini-reset-btn", "n_clicks"),
          Input("mini-retrain-btn", "n_clicks")],
-        [State("mini-dataset-source", "value")]
+        [State("mini-csv-upload", "filename")]
     )
-    def update_ml_tab(tab_val, selected_model, retrain_clicks, dataset_source):
-        """Render ML comparison table, scatter plot, PCA scree plot, and retrain dynamically."""
-        global _ACTIVE_MODELS, _UPLOADED_DF, _UPLOADED_FILENAME, _DEFAULT_MODELS
+    def update_ml_tab(tab_val, selected_model, upload_contents, reset_clicks, retrain_clicks, upload_filename):
+        """Handle file upload, reset to default, and update ML visualizations dynamically."""
+        global _ACTIVE_MODELS, _ACTIVE_DF, _ACTIVE_FILENAME, _DEFAULT_MODELS
         
-        status_msg = ""
-        source_label = "Built-in Project Dataset (3,133 records)"
-        total_obs = 3133
-        cities_count = 6
+        triggered = dash.ctx.triggered_id
         
-        # Decide which dataset to use
-        if dataset_source == "upload":
-            if _UPLOADED_DF is not None:
-                try:
-                    active_df = _UPLOADED_DF
-                    _ACTIVE_MODELS = train_mini_project_models(active_df)
-                    source_label = f"Uploaded File: {_UPLOADED_FILENAME} ({len(active_df):,} records)"
-                    total_obs = len(active_df)
-                    cities_count = active_df["city"].nunique() if "city" in active_df.columns else 1
-                    status_msg = html.Div([
-                        html.Span("✓ Models retrained successfully! ", style={"color": "#16a34a", "fontWeight": "bold"}),
-                        html.Span(f"Trained on '{_UPLOADED_FILENAME}' ({total_obs:,} rows) at {datetime.now().strftime('%H:%M:%S')}")
-                    ], style={"fontSize": "0.85rem", "marginTop": "6px"})
-                except Exception as e:
-                    logger.error(f"Error training on uploaded dataset: {e}")
-                    status_msg = html.Div(f"✗ Training failed: {str(e)}", style={"color": "#ef4444", "fontWeight": "bold", "fontSize": "0.85rem", "marginTop": "6px"})
-                    _ACTIVE_MODELS = get_mini_project_models()
-            else:
-                status_msg = html.Div("⚠️ Please drag & drop or select a CSV/ZIP file above before retraining.", style={"color": "#f59e0b", "fontWeight": "bold", "fontSize": "0.85rem", "marginTop": "6px"})
-                _ACTIVE_MODELS = get_mini_project_models()
-        else:
-            default_df = get_mini_project_df()
-            if _DEFAULT_MODELS is None:
-                _DEFAULT_MODELS = train_mini_project_models(default_df)
-            _ACTIVE_MODELS = _DEFAULT_MODELS
-            total_obs = len(default_df)
-            cities_count = default_df["city"].nunique() if "city" in default_df.columns else 6
-            if retrain_clicks and retrain_clicks > 0:
-                status_msg = html.Div("✓ Reset to Built-in Project Dataset (3,133 records).", style={"color": "#2563eb", "fontWeight": "bold", "fontSize": "0.85rem", "marginTop": "6px"})
+        # 1. Direct file upload
+        if triggered == "mini-csv-upload" and upload_contents:
+            try:
+                df = parse_uploaded_contents(upload_contents, upload_filename)
+                _ACTIVE_DF = df
+                _ACTIVE_FILENAME = upload_filename
+                _ACTIVE_MODELS = train_mini_project_models(df)
+                upload_badge = html.Div([
+                    html.Span("✓ Successfully loaded & trained on: ", style={"color": "#16a34a", "fontWeight": "bold"}),
+                    html.Span(f"{upload_filename} ({len(df):,} rows, {len(df.columns)} columns)!", style={"fontWeight": "600", "color": "#0f172a"})
+                ], style={"padding": "8px 12px", "backgroundColor": "#f0fdf4", "border": "1px solid #bbf7d0", "borderRadius": "6px", "fontSize": "0.85rem"})
+                banner_text = f"Active Source: Uploaded File '{upload_filename}' ({len(df):,} records). All models and visuals below are evaluated on this data."
+            except Exception as e:
+                logger.error(f"Failed to parse uploaded dataset: {e}")
+                upload_badge = html.Div(f"✗ Failed to read file: {str(e)}", style={"color": "#ef4444", "fontWeight": "bold", "fontSize": "0.85rem"})
+                banner_text = "Active Source: Built-in Mini Project Dataset (3,133 observations). (Upload encountered an error)."
                 
-        models = _ACTIVE_MODELS or get_mini_project_models()
+        # 2. Reset button clicked
+        elif triggered == "mini-reset-btn":
+            _ACTIVE_DF = None
+            _ACTIVE_FILENAME = None
+            _ACTIVE_MODELS = get_default_models()
+            upload_badge = html.Div("✓ Reset to Built-in Project Dataset (3,133 records).", style={"color": "#2563eb", "fontWeight": "600", "fontSize": "0.85rem"})
+            banner_text = "Active Source: Built-in Mini Project Dataset (3,133 observations across 6 Indian cities). All models and visuals are trained on this data."
+            
+        # 3. Retrain button clicked
+        elif triggered == "mini-retrain-btn":
+            if _ACTIVE_DF is not None:
+                _ACTIVE_MODELS = train_mini_project_models(_ACTIVE_DF)
+                upload_badge = html.Div(f"✓ Re-trained models on uploaded file: {_ACTIVE_FILENAME} ({len(_ACTIVE_DF):,} records)", style={"color": "#16a34a", "fontSize": "0.85rem", "fontWeight": "bold"})
+                banner_text = f"Active Source: Uploaded File '{_ACTIVE_FILENAME}' ({len(_ACTIVE_DF):,} records)."
+            else:
+                _ACTIVE_MODELS = get_default_models()
+                upload_badge = html.Div("✓ Re-trained models on Built-in Project Dataset (3,133 records).", style={"color": "#2563eb", "fontSize": "0.85rem", "fontWeight": "bold"})
+                banner_text = "Active Source: Built-in Mini Project Dataset (3,133 observations across 6 Indian cities)."
+                
+        # 4. Tab load or model radio switch
+        else:
+            if _ACTIVE_DF is not None:
+                banner_text = f"Active Source: Uploaded File '{_ACTIVE_FILENAME}' ({len(_ACTIVE_DF):,} records). All models and visuals below are evaluated on this data."
+                upload_badge = html.Div(f"✓ Using uploaded file: {_ACTIVE_FILENAME} ({len(_ACTIVE_DF):,} records)", style={"color": "#16a34a", "fontSize": "0.85rem", "fontWeight": "500"})
+            else:
+                banner_text = "Active Source: Built-in Mini Project Dataset (3,133 observations across 6 Indian cities). All models and visuals are trained on this data."
+                upload_badge = ""
+                
+        models = _ACTIVE_MODELS or get_default_models()
         lr_m = models["lr_metrics"]
         pca_m = models["pca_metrics"]
         rf_m = models["rf_metrics"]
@@ -300,6 +268,7 @@ def register_mini_project_callbacks(app):
         
         # Select predictions based on radio button
         y_test = models["y_test"]
+        source_label = _ACTIVE_FILENAME or "Built-in Dataset"
         if selected_model == "lr":
             y_pred = models["lr_pred"]
             model_label = "Standard Linear Regression"
@@ -314,7 +283,11 @@ def register_mini_project_callbacks(app):
         fig_scree = create_pca_variance_chart(models["pca_variance_ratio"])
         
         # Update KPI Cards
+        current_df = _ACTIVE_DF if _ACTIVE_DF is not None else get_mini_project_df()
+        total_obs = len(current_df)
+        cities_count = current_df["city"].nunique() if "city" in current_df.columns else 1
         pca_r2 = pca_m["r2"] * 100
+        
         cards = [
             create_metric_card("Monitored Observations", f"{total_obs:,} Records", "blue", trend=source_label, icon="📋"),
             create_metric_card("Urban Metropolitan Airsheds", f"{cities_count} Regions", "green", icon="🏙️"),
@@ -323,9 +296,9 @@ def register_mini_project_callbacks(app):
         ]
         kpi_grid = create_metric_grid(cards, columns=4)
         
-        return table, fig_scatter, fig_scree, status_msg, kpi_grid
+        return table, fig_scatter, fig_scree, upload_badge, banner_text, kpi_grid
 
-    # 6. Live Predictor Simulation
+    # 4. Live Predictor Simulation
     @app.callback(
         [Output("sim-gauge", "figure"),
          Output("sim-advisory-card", "children")],
@@ -340,8 +313,8 @@ def register_mini_project_callbacks(app):
          Input("sim-wind", "value")]
     )
     def live_predict_simulation(pm25, pm10, no2, so2, co, o3, temp, humidity, wind):
-        """Simulate real-time AQI prediction using the PCA + Linear Regression pipeline."""
-        models = get_mini_project_models()
+        """Simulate real-time AQI prediction using the active PCA + Linear Regression pipeline."""
+        models = get_active_models()
         pipeline = models["pca_pipeline"]
         
         # Build input vector matching active features
