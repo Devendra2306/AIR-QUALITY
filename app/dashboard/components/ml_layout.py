@@ -28,11 +28,11 @@ def create_ml_tab_layout() -> html.Div:
                                     dcc.RadioItems(
                                         id="ml-dataset-source",
                                         options=[
-                                            {"label": " Sample Multi-City Dataset (3,000+ records)", "value": "sample"},
-                                            {"label": " Live DuckDB Database Measurements", "value": "database"},
-                                            {"label": " Upload Your Own CSV File", "value": "upload"}
+                                            {"label": " Official Indian National Dataset (29,531 records, 26 cities)", "value": "cpcb_national"},
+                                            {"label": " Upload Your Own CSV or ZIP Dataset", "value": "upload"},
+                                            {"label": " Live Analytical Database Stream", "value": "database"}
                                         ],
-                                        value="sample",
+                                        value="cpcb_national",
                                         className="radio-group"
                                     ),
                                     html.Div(
@@ -43,8 +43,9 @@ def create_ml_tab_layout() -> html.Div:
                                                 id="ml-csv-upload",
                                                 children=html.Div([
                                                     html.Span("📂 Drag and Drop or ", style={"fontWeight": "600"}),
-                                                    html.A("Select CSV Dataset File", style={"color": "#3b82f6", "textDecoration": "underline"})
+                                                    html.A("Select CSV or ZIP Dataset File", style={"color": "#3b82f6", "textDecoration": "underline"})
                                                 ]),
+                                                accept=".csv,.zip",
                                                 className="upload-dropzone"
                                             ),
                                             html.Div(id="ml-upload-status", className="upload-status")
@@ -53,7 +54,7 @@ def create_ml_tab_layout() -> html.Div:
                                     html.Div(
                                         id="ml-dataset-info-banner",
                                         className="info-banner",
-                                        children="Ready: Built-in multi-city dataset loaded (Delhi, Mumbai, Bengaluru, Kolkata, Hyderabad)."
+                                        children="Active: Official Indian National Air Quality Dataset (29,531 daily records across 26 cities)."
                                     )
                                 ]
                             ),

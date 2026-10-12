@@ -99,13 +99,24 @@ class AirQualityMLTrainer:
         
         if target_clean not in df_clean.columns:
             raise ValueError(f"Target column '{target_column}' not found in dataset columns: {list(df_clean.columns)}")
+
+        # Drop rows where target variable is missing
+        df_clean = df_clean.dropna(subset=[target_clean]).copy()
             
-        # Remove timestamp/id columns from feature candidates
+        # Remove timestamp, categorical, and metadata columns from feature candidates
         exclude_cols = {
             target_clean, "id", "measurement_id", "sensor_id", "location_id", "timestamp", 
-            "measurement_time", "ingestion_time", "source", "unit", "dominant_pollutant"
+            "measurement_time", "ingestion_time", "source", "unit", "dominant_pollutant",
+            "city", "station", "stationname", "state", "date", "aqi_bucket", "status", "country"
         }
         
+        # Try converting potential numeric columns
+        for col in df_clean.columns:
+            if col not in exclude_cols:
+                converted = pd.to_numeric(df_clean[col], errors='coerce')
+                if converted.notna().sum() > 10:  # If at least 10 valid numbers
+                    df_clean[col] = converted
+
         if feature_columns:
             selected_features = [c.lower().replace(".", "").replace("-", "").strip() for c in feature_columns if c.lower() in df_clean.columns and c.lower() != target_clean]
         else:
@@ -116,6 +127,7 @@ class AirQualityMLTrainer:
         if not selected_features:
             raise ValueError("No valid numeric features found in the dataset to train the model.")
             
+        self.df_clean = df_clean
         self.feature_names = selected_features
         self.target_name = target_clean
         self.task_type = task_type
@@ -277,14 +289,17 @@ class AirQualityMLTrainer:
         visual_data["feature_importance"] = feature_importance_list
         
         # Feature Correlation Matrix (numeric features only)
-        corr_cols = [c for c in features if c in df.columns]
-        if target_column.lower() in df.columns and task_type == "regression":
-            corr_cols.append(target_column.lower())
-        corr_df = df[corr_cols].select_dtypes(include=[np.number]).corr().fillna(0)
+        clean_df = getattr(self, "df_clean", df)
+        corr_cols = [c for c in features if c in clean_df.columns]
+        target_norm = target_column.lower().replace(".", "").replace("-", "").strip()
+        if target_norm in clean_df.columns and task_type == "regression":
+            if target_norm not in corr_cols:
+                corr_cols.append(target_norm)
+        corr_df = clean_df[corr_cols].select_dtypes(include=[np.number]).corr().fillna(0)
         visual_data["correlation_matrix"] = {
             "z": corr_df.values.round(2).tolist(),
-            "x": corr_df.columns.tolist(),
-            "y": corr_df.columns.tolist()
+            "x": [str(c).upper() for c in corr_df.columns],
+            "y": [str(c).upper() for c in corr_df.columns]
         }
         
         self.metrics = metrics

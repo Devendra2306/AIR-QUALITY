@@ -28,14 +28,42 @@ from app.dashboard.components.ml_charts import (
 
 # In-memory storage for uploaded dataset
 _UPLOADED_DF = None
+_UPLOADED_FILENAME = None
 
 
 def parse_contents(contents: str, filename: str) -> pd.DataFrame:
-    """Parse base64 uploaded CSV file."""
+    """Parse base64 uploaded CSV or ZIP file."""
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
-    df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-    return df
+    
+    if filename.lower().endswith(".zip"):
+        import zipfile
+        with zipfile.ZipFile(io.BytesIO(decoded)) as z:
+            csv_candidates = [n for n in z.namelist() if n.lower().endswith('.csv') and not n.startswith('__MACOSX')]
+            if not csv_candidates:
+                raise ValueError("No CSV file found in uploaded ZIP archive.")
+            selected_csv = csv_candidates[0]
+            for name in csv_candidates:
+                if "city_day" in name.lower() or "station_day" in name.lower():
+                    selected_csv = name
+                    break
+            with z.open(selected_csv) as f:
+                raw_bytes = f.read()
+            for encoding in ['utf-8', 'latin1', 'utf-8-sig', 'cp1252']:
+                try:
+                    df = pd.read_csv(io.BytesIO(raw_bytes), encoding=encoding)
+                    return df
+                except Exception:
+                    continue
+            raise ValueError(f"Could not decode CSV file ({selected_csv}) inside ZIP archive.")
+    else:
+        for encoding in ['utf-8', 'latin1', 'utf-8-sig', 'cp1252']:
+            try:
+                df = pd.read_csv(io.BytesIO(decoded), encoding=encoding)
+                return df
+            except Exception:
+                continue
+        raise ValueError("Could not decode CSV file. Please ensure it is valid UTF-8 or Latin-1.")
 
 
 def register_ml_callbacks(app):
@@ -48,14 +76,18 @@ def register_ml_callbacks(app):
     )
     def toggle_dataset_source(source):
         """Toggle file upload dropzone and info banner based on selected dataset."""
+        global _UPLOADED_DF, _UPLOADED_FILENAME
         if source == "upload":
-            banner = "Please upload your air quality CSV file below. The model will automatically parse features."
+            if _UPLOADED_DF is not None:
+                banner = f"Active Upload: {_UPLOADED_FILENAME} ({len(_UPLOADED_DF):,} rows, {len(_UPLOADED_DF.columns)} columns). Click 'Train Model' to train on this dataset."
+            else:
+                banner = "Please upload your CSV or ZIP dataset file below. The model will automatically parse and use it for training."
             return {"display": "block", "marginTop": "12px"}, banner
         elif source == "database":
             banner = "Connecting directly to local DuckDB analytical database (raw.measurements table)."
             return {"display": "none"}, banner
         else:
-            banner = "Using built-in multi-city sample dataset with Delhi, Mumbai, Bengaluru, Kolkata, Hyderabad records."
+            banner = "Active: Official Indian National Air Quality Dataset (29,531 daily records across 26 major cities)."
             return {"display": "none"}, banner
 
     @app.callback(
@@ -64,21 +96,29 @@ def register_ml_callbacks(app):
         State("ml-csv-upload", "filename")
     )
     def handle_upload(contents, filename):
-        """Handle uploaded CSV file."""
-        global _UPLOADED_DF
+        """Handle uploaded CSV or ZIP file."""
+        global _UPLOADED_DF, _UPLOADED_FILENAME
         if not contents or not filename:
             return ""
             
         try:
             df = parse_contents(contents, filename)
             _UPLOADED_DF = df
+            _UPLOADED_FILENAME = filename
+            cols_preview = ", ".join(list(df.columns)[:5])
+            if len(df.columns) > 5:
+                cols_preview += f" (+{len(df.columns) - 5} more)"
             return html.Div([
-                html.Span("✓ Successfully uploaded: ", style={"color": "#10b981", "fontWeight": "bold"}),
-                html.Span(f"{filename} ({len(df):,} rows, {len(df.columns)} columns)")
-            ], style={"marginTop": "8px", "fontSize": "0.9rem"})
+                html.Div([
+                    html.Span("✓ Successfully loaded: ", style={"color": "#10b981", "fontWeight": "bold"}),
+                    html.Span(f"{filename} ({len(df):,} rows, {len(df.columns)} columns)", style={"fontWeight": "600", "color": "#0f172a"})
+                ]),
+                html.Div(f"Columns: {cols_preview}", style={"fontSize": "0.8rem", "color": "#64748b", "marginTop": "2px"}),
+                html.Div("Ready! Select your target variable and click '🚀 Train Model & Generate Visuals'.", style={"fontSize": "0.85rem", "color": "#2563eb", "marginTop": "4px", "fontWeight": "500"})
+            ], style={"marginTop": "8px", "padding": "8px", "backgroundColor": "#f0fdf4", "borderRadius": "6px", "border": "1px solid #bbf7d0"})
         except Exception as e:
-            logger.error(f"Failed to parse uploaded CSV: {e}")
-            return html.Div(f"✗ Failed to read CSV file: {str(e)}", style={"color": "#ef4444", "marginTop": "8px"})
+            logger.error(f"Failed to parse uploaded file: {e}")
+            return html.Div(f"✗ Failed to read file: {str(e)}", style={"color": "#ef4444", "marginTop": "8px", "fontWeight": "bold"})
 
     @app.callback(
         [Output("ml-metrics-container", "children"),
@@ -95,23 +135,44 @@ def register_ml_callbacks(app):
     )
     def train_and_visualize(n_clicks, dataset_source, target_column, algorithm, test_split):
         """Train model and update all visual analytics."""
-        global _UPLOADED_DF
+        global _UPLOADED_DF, _UPLOADED_FILENAME
+        from app.dashboard.components.charts import create_empty_figure
+        
         test_ratio = float(test_split) / 100.0 if test_split else 0.2
         task_type = "classification" if target_column == "aqi_category" else "regression"
         
         try:
             # 1. Load Data
-            if dataset_source == "upload" and _UPLOADED_DF is not None:
-                df = _UPLOADED_DF.copy()
+            if dataset_source == "upload":
+                if _UPLOADED_DF is not None:
+                    df = _UPLOADED_DF.copy()
+                    source_name = f"Uploaded File: {_UPLOADED_FILENAME}"
+                else:
+                    return (
+                        html.Div(),
+                        create_empty_figure("No file uploaded. Please upload a CSV or ZIP dataset file above."),
+                        create_empty_figure("No file uploaded"),
+                        create_empty_figure("No file uploaded"),
+                        create_empty_figure("No file uploaded"),
+                        html.Div("⚠️ Please upload a CSV or ZIP dataset first before training.", style={"color": "#f59e0b", "marginTop": "10px", "fontWeight": "bold"})
+                    )
             elif dataset_source == "database":
                 df = ml_trainer.load_from_database()
+                source_name = "DuckDB Analytical Database"
             else:
-                sample_path = PROJECT_ROOT / "data" / "sample_air_quality_dataset.csv"
-                if not sample_path.exists():
-                    from scripts.generate_sample_dataset import generate_dataset
-                    df = generate_dataset()
+                # "cpcb_national"
+                national_path = PROJECT_ROOT / "data" / "city_day.csv"
+                if national_path.exists():
+                    df = pd.read_csv(national_path)
+                    source_name = "Indian National Dataset (29,531 records)"
                 else:
+                    sample_path = PROJECT_ROOT / "data" / "sample_air_quality_dataset.csv"
                     df = pd.read_csv(sample_path)
+                    source_name = "Sample Dataset"
+            
+            # Enrich dataframe with AQI calculation if columns match
+            from app.ml.aqi_calculator import enrich_dataframe_with_aqi
+            df = enrich_dataframe_with_aqi(df)
                     
             # 2. Train model
             results = ml_trainer.train(
@@ -124,21 +185,22 @@ def register_ml_callbacks(app):
             
             metrics = results["metrics"]
             visual_data = results["visual_data"]
+            total_records = metrics.get('train_samples', 0) + metrics.get('test_samples', 0)
             
             # 3. Create Metric Cards
             if task_type == "regression":
                 metric_cards = [
-                    create_metric_card("R² Score (Variance Explained)", f"{metrics.get('r2_score', 0):.4f}", "green"),
+                    create_metric_card("R² Score (Accuracy)", f"{metrics.get('r2_score', 0):.4f}", "green"),
                     create_metric_card("Mean Absolute Error (MAE)", f"{metrics.get('mae', 0):.2f}", "blue"),
                     create_metric_card("Root Mean Sq Error (RMSE)", f"{metrics.get('rmse', 0):.2f}", "amber"),
-                    create_metric_card("Sample Dataset Size", f"{metrics.get('train_samples', 0) + metrics.get('test_samples', 0):,} records", "purple")
+                    create_metric_card("Dataset Used", f"{total_records:,} records", "purple", trend=source_name)
                 ]
             else:
                 metric_cards = [
                     create_metric_card("Accuracy Score", f"{metrics.get('accuracy', 0)*100:.1f}%", "green"),
                     create_metric_card("Precision (Weighted)", f"{metrics.get('precision', 0):.3f}", "blue"),
                     create_metric_card("F1-Score (Macro)", f"{metrics.get('f1_score', 0):.3f}", "amber"),
-                    create_metric_card("Dataset Test Samples", f"{metrics.get('test_samples', 0):,}", "purple")
+                    create_metric_card("Dataset Used", f"{total_records:,} records", "purple", trend=source_name)
                 ]
             metrics_grid = create_metric_grid(metric_cards, columns=4)
             
@@ -146,7 +208,7 @@ def register_ml_callbacks(app):
             if task_type == "regression":
                 chart_pred = create_actual_vs_predicted_chart(
                     visual_data.get("actual_vs_pred", []),
-                    title=f"Actual vs. Predicted {target_column.upper()}"
+                    title=f"Actual vs. Predicted {target_column.upper()} ({source_name})"
                 )
                 chart_res = create_residuals_chart(
                     visual_data.get("residuals", []),
@@ -155,7 +217,7 @@ def register_ml_callbacks(app):
             else:
                 chart_pred = create_confusion_matrix_chart(
                     visual_data.get("confusion_matrix", {}),
-                    title="Confusion Matrix (AQI Category)"
+                    title=f"Confusion Matrix ({source_name})"
                 )
                 chart_res = create_residuals_chart([], title="Residuals not applicable for classification")
                 
@@ -171,16 +233,15 @@ def register_ml_callbacks(app):
             
             status_text = html.Div([
                 html.Span("✓ Model trained successfully! ", style={"color": "#10b981", "fontWeight": "bold"}),
-                html.Span(f"Algorithm: {algorithm.replace('_', ' ').title()} | Target: {target_column} | Completed at {datetime.now().strftime('%H:%M:%S')}")
+                html.Span(f"Algorithm: {algorithm.replace('_', ' ').title()} | Target: {target_column.upper()} | Trained on: {source_name} ({total_records:,} samples) | Finished at {datetime.now().strftime('%H:%M:%S')}")
             ], style={"marginTop": "10px", "fontSize": "0.95rem"})
             
             return metrics_grid, chart_pred, chart_feat, chart_res, chart_corr, status_text
             
         except Exception as e:
             logger.error(f"Error training model: {str(e)}")
-            from app.dashboard.components.charts import create_empty_figure
             empty_fig = create_empty_figure(f"Training Error: {str(e)}")
-            err_msg = html.Div(f"✗ Error during training: {str(e)}", style={"color": "#ef4444", "marginTop": "10px"})
+            err_msg = html.Div(f"✗ Error during training: {str(e)}", style={"color": "#ef4444", "marginTop": "10px", "fontWeight": "bold"})
             return html.Div(), empty_fig, empty_fig, empty_fig, empty_fig, err_msg
 
     @app.callback(
