@@ -1,20 +1,15 @@
-# Render Deployment Blueprint Configuration
 services:
   - type: web
     name: air-quality-pipeline
-    runtime: python
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:server --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT
     plan: free
-    region: oregon
-    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt && python scripts/generate_sample_dataset.py"
-    startCommand: "gunicorn app.dashboard.app:server --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120"
+    autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.8
-      - key: ENVIRONMENT
-        value: production
+        value: 3.11.9
+      - key: HOST
+        value: 0.0.0.0
       - key: DEBUG
         value: "false"
-      - key: DATABASE_PATH
-        value: data/air_quality.db
-      - key: SECRET_KEY
-        generateValue: true

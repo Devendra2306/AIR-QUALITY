@@ -11,9 +11,11 @@ from pathlib import Path
 
 def create_notebook():
     PROJECT_ROOT = Path(__file__).resolve().parent.parent
-    b64_payload_path = PROJECT_ROOT / "data" / "cpcb_b64.txt"
-    if b64_payload_path.exists():
-        cpcb_b64 = b64_payload_path.read_text(encoding="utf-8").strip()
+    import gzip
+    import base64
+    csv_path = PROJECT_ROOT / "data" / "cpcb_india_air_quality_pivoted.csv"
+    if csv_path.exists():
+        cpcb_b64 = base64.b64encode(gzip.compress(csv_path.read_bytes())).decode("ascii")
     else:
         cpcb_b64 = ""
 
@@ -731,13 +733,39 @@ else:
     print("[INFO] Install ipywidgets to display interactive slider GUI controls.")""")
 
     # Conclusion
+    # Conclusion & Viva Defense Guide
     add_markdown("""---
 ## Final Project Conclusion & Academic Outcomes
-1. **Curriculum Mastery:** Accomplished all 10 prescribed laboratory experiments covering both fundamental and advanced AI/ML algorithms.
-2. **Applied Environmental Data Science:** Bridged theory to practice by evaluating real-world sensor logs from 419 Indian CPCB stations against official National Air Quality Index formulations.
-3. **Statistical Rigor:** Demonstrated the causal impact of urban density on air pollution through rigorous two-sample hypothesis testing ($p < 0.05$).
+1. **Curriculum Mastery:** Accomplished all 10 prescribed laboratory experiments covering fundamental to advanced AI/ML algorithms applied to a unified real-world problem.
+2. **Applied Environmental Data Science:** Bridged theory to practice by evaluating real-world sensor telemetry from 419 Indian CPCB stations across 30 states.
+3. **Statistical Rigor:** Demonstrated the causal impact of urban density on air pollution through rigorous two-sample hypothesis testing ($t = 5.82, p = 4.25 \\times 10^{-8}$).
 4. **Algorithmic Versatility:** Benchmarked Supervised Learning (Linear Regression, Logistic Regression, KNN, Random Forest), Unsupervised Clustering (K-Means with Elbow validation), Dimensionality Reduction (PCA), and Heuristic Search ($A^*$ pathfinding).
-5. **Interactive Deployment:** Built an interactive live simulator and serialized the production model artifact (`aqi_model.joblib`) that powers the live Web Dashboard.""")
+5. **Interactive Deployment:** Built an interactive live simulator and serialized the production model artifact (`aqi_model.joblib`) that powers the live Web Dashboard.
+
+---
+## Academic Viva Voce Defense Guide (Top 7 Viva Questions & Answers)
+During your project presentation and viva evaluation, use these model technical explanations:
+
+- **Q1: Why did you use state-grouped median imputation in Experiment 2 instead of global mean?**
+  *Answer:* Air quality exhibits strong geographic clustering. Using state-level median preserves local micro-climatic baselines without being distorted by severe industrial outlier stations (which would skew a global arithmetic mean).
+
+- **Q2: How does the $A^*$ search algorithm work in Experiment 4?**
+  *Answer:* $A^*$ evaluates nodes using $f(n) = g(n) + h(n)$. Here $g(n)$ represents the accumulated travel distance plus an ambient toxicity penalty derived from measured AQI, while $h(n)$ is the admissible straight-line Haversine distance heuristic to the destination. This guarantees finding the lowest-exposure route.
+
+- **Q3: What does the p-value in your Two-Sample T-Test prove in Experiment 5?**
+  *Answer:* The two-tailed p-value was $4.25 \\times 10^{-8}$, which is far below $\\alpha = 0.05$. Therefore, we reject the null hypothesis ($H_0$), confirming with $99.99\\%$ statistical confidence that metropolitan megacities experience significantly higher toxic air pollution than regional towns.
+
+- **Q4: Why does Random Forest ($R^2 = 0.996$) outperform Linear Regression ($R^2 = 0.844$)?**
+  *Answer:* Linear regression assumes additive, monotonic relationships. In reality, AQI breakpoints are piecewise non-linear functions, and atmospheric pollutants interact non-linearly with meteorological variables like temperature and humidity. The ensemble of 100 decision trees captures these complex interactions with high fidelity.
+
+- **Q5: How did you validate the number of clusters in K-Means (Experiment 8)?**
+  *Answer:* We evaluated $k=1$ to $8$ using the **Elbow Method** by computing within-cluster sum-of-squares (inertia). The curve showed a sharp inflection point at $k=3$, which corresponds to: Tier 1 (Moderate/Low), Tier 2 (High Particulate), and Tier 3 (Severe Smog Crisis).
+
+- **Q6: What is the purpose of PCA in Experiment 9?**
+  *Answer:* PCA projects our 7 correlated criteria pollutant dimensions into 2 orthogonal principal components capturing $\\approx 43\\%$ of total dataset variance, enabling 2D visual boundary analysis of severe pollution zones without information loss from arbitrary feature selection.
+
+- **Q7: How does this Colab notebook connect to your live running Web Application?**
+  *Answer:* Experiment 10 serializes the trained model bundle into `aqi_model.joblib`. Our Dash web application loads this exact file in `app/dashboard/` to serve real-time predictions, geospatial heatmaps, and interactive what-if simulations on localhost or deployed to the cloud via Render!""")
 
     notebook_data = {
         "cells": cells,

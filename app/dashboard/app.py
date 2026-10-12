@@ -20,8 +20,10 @@ from app.dashboard.components.charts import (
     create_bar_chart
 )
 from app.dashboard.components.ml_layout import create_ml_tab_layout
+from app.dashboard.components.insights_layout import create_insights_tab_layout
 from app.dashboard.callbacks.map_callbacks import register_map_callbacks
 from app.dashboard.callbacks.ml_callbacks import register_ml_callbacks
+from app.dashboard.callbacks.insights_callbacks import register_insights_callbacks, get_insights_dataframe
 
 
 class DashboardApp:
@@ -40,6 +42,9 @@ class DashboardApp:
     
     def _setup_layout(self):
         """Setup dashboard layout."""
+        df_cpcb = get_insights_dataframe()
+        city_list = sorted(df_cpcb['city'].dropna().unique().tolist()) if 'city' in df_cpcb.columns else ["Delhi", "Bengaluru", "Mumbai"]
+
         self.app.layout = html.Div(
             className="app-shell",
             children=[
@@ -152,6 +157,11 @@ class DashboardApp:
                             children=[create_ml_tab_layout()]
                         ),
                         create_tab(
+                            label="AI/ML Lab Insights (Exp 1-10)",
+                            value="insights-tab",
+                            children=[create_insights_tab_layout(city_list)]
+                        ),
+                        create_tab(
                             label="Export",
                             value="export-tab",
                             children=[
@@ -197,6 +207,7 @@ class DashboardApp:
         """Register all callbacks."""
         register_map_callbacks(self.app)
         register_ml_callbacks(self.app)
+        register_insights_callbacks(self.app)
         self._register_summary_callbacks()
         self._register_trend_callbacks()
         self._register_quality_callbacks()
