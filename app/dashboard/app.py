@@ -157,7 +157,7 @@ class DashboardApp:
                             children=[create_ml_tab_layout()]
                         ),
                         create_tab(
-                            label="AI/ML Lab Insights (Exp 1-10)",
+                            label="Mini Project",
                             value="insights-tab",
                             children=[create_insights_tab_layout(city_list)]
                         ),

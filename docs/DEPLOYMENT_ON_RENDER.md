@@ -66,7 +66,7 @@ When presenting to your professor:
 
 ### Step 1: Open the Live Web Platform
 - Open your live Render link (or `http://localhost:8050` if running locally).
-- Click on **"AI/ML Lab Insights (Exp 1-10)"** tab:
+- Click on **"Mini Project"** tab:
   1. **A* Search Corridor**: Select **Delhi** as Origin and **Bengaluru** as Destination $\rightarrow$ Click *Compute Optimal A* Route*. Show how the algorithm dynamically routes travel through clean-air waypoints (Bhopal, Nagpur, Hyderabad).
   2. **Hypothesis Testing**: Show the T-test card proving metropolitan pollution is statistically significantly higher than regional towns ($p < 0.05$).
   3. **K-Means Clustering**: Show how the 419 stations are partitioned into 3 severity tiers, and point to the Elbow curve.

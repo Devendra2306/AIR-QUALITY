@@ -36,7 +36,7 @@ def create_insights_tab_layout(city_options: list) -> html.Div:
                         style={"display": "flex", "alignItems": "center", "justifyContent": "space-between", "flexWrap": "wrap", "gap": "12px"},
                         children=[
                             html.Div([
-                                html.Span("🎓 COLLEGE MINOR PROJECT | AI & ML CURRICULUM", style={
+                                html.Span("🎓 AI/ML MINI PROJECT", style={
                                     "background": "rgba(59, 130, 246, 0.2)",
                                     "color": "#60a5fa",
                                     "padding": "4px 10px",
@@ -47,7 +47,7 @@ def create_insights_tab_layout(city_options: list) -> html.Div:
                                     "display": "inline-block",
                                     "marginBottom": "8px"
                                 }),
-                                html.H2("Applied Machine Learning & Environmental Analytics Hub", style={
+                                html.H2("Air Quality AI/ML Mini Project Hub", style={
                                     "margin": "0 0 6px 0",
                                     "fontSize": "1.5rem",
                                     "fontWeight": "700",
