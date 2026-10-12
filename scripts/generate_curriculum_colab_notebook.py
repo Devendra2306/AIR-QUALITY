@@ -791,17 +791,12 @@ During your project presentation and viva evaluation, use these model technical 
     }
 
     p1 = PROJECT_ROOT / "notebooks" / "Air_Quality_AI_ML_Mini_Project_Colab.ipynb"
-    p2 = PROJECT_ROOT / "Air_Quality_AI_ML_Mini_Project_Colab.ipynb"
 
     with open(p1, "w", encoding="utf-8") as f:
         json.dump(notebook_data, f, indent=1)
 
-    with open(p2, "w", encoding="utf-8") as f:
-        json.dump(notebook_data, f, indent=1)
-
-    print(f"[OK] Successfully created syllabus-aligned Colab notebook:")
+    print(f"[OK] Successfully created canonical Colab notebook at:")
     print(f"  - {p1.resolve()}")
-    print(f"  - {p2.resolve()}")
 
 if __name__ == "__main__":
     create_notebook()
