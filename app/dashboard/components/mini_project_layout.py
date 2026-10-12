@@ -249,7 +249,102 @@ def create_mini_project_layout(cities: list) -> html.Div:
                         ]
                     ),
                     
-                    # TAB 2: Exploratory Data Analysis & Trends
+                    # TAB 2: Locations & Geospatial Network
+                    create_tab(
+                        label="🗺️ Locations & Geospatial Map",
+                        value="tab-map",
+                        children=[
+                            html.Div(
+                                style={"marginTop": "16px"},
+                                children=[
+                                    # Header Panel with Info & Dynamic Controls
+                                    create_panel(
+                                        title="Geospatial Air Quality Network & Station Leaderboard",
+                                        children=[
+                                            html.Div(
+                                                style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "flexWrap": "wrap", "gap": "16px", "marginBottom": "20px"},
+                                                children=[
+                                                    html.Div([
+                                                        html.P(
+                                                            "Interactive spatial mapping of continuous ambient air quality monitoring stations (CAAQMS) across Indian metropolitan airsheds. If you upload custom datasets with coordinates or city names, this section dynamically maps them.",
+                                                            style={"margin": "0", "color": "#64748b", "fontSize": "0.95rem", "maxWidth": "800px"}
+                                                        )
+                                                    ]),
+                                                    html.Div(
+                                                        style={"display": "flex", "gap": "16px", "alignItems": "center", "flexWrap": "wrap"},
+                                                        children=[
+                                                            # Metric Selector
+                                                            html.Div([
+                                                                html.Label("Display Metric:", style={"fontSize": "0.82rem", "fontWeight": "600", "color": "#475569", "display": "block", "marginBottom": "4px"}),
+                                                                dcc.Dropdown(
+                                                                    id="map-metric-select",
+                                                                    options=[
+                                                                        {"label": "Air Quality Index (AQI)", "value": "aqi"},
+                                                                        {"label": "PM2.5 (Fine Dust)", "value": "pm25"},
+                                                                        {"label": "PM10 (Coarse Dust)", "value": "pm10"},
+                                                                        {"label": "NO2 (Nitrogen Dioxide)", "value": "no2"},
+                                                                        {"label": "SO2 (Sulfur Dioxide)", "value": "so2"},
+                                                                        {"label": "CO (Carbon Monoxide)", "value": "co"},
+                                                                        {"label": "O3 (Ground Ozone)", "value": "o3"}
+                                                                    ],
+                                                                    value="aqi",
+                                                                    clearable=False,
+                                                                    style={"width": "210px", "fontSize": "0.9rem"}
+                                                                )
+                                                            ]),
+                                                            # City Filter
+                                                            html.Div([
+                                                                html.Label("Filter Region / City:", style={"fontSize": "0.82rem", "fontWeight": "600", "color": "#475569", "display": "block", "marginBottom": "4px"}),
+                                                                dcc.Dropdown(
+                                                                    id="map-city-filter",
+                                                                    options=[{"label": "Pan-India (All Cities)", "value": "ALL"}] + city_options,
+                                                                    value="ALL",
+                                                                    clearable=False,
+                                                                    style={"width": "230px", "fontSize": "0.9rem"}
+                                                                )
+                                                            ])
+                                                        ]
+                                                    )
+                                                ]
+                                            ),
+                                            # Location KPI Grid
+                                            html.Div(id="map-kpi-grid")
+                                        ]
+                                    ),
+                                    
+                                    # Geospatial Map Panel
+                                    create_panel(
+                                        title="Interactive India Geospatial Monitoring Map",
+                                        children=[
+                                            html.Div(
+                                                style={"position": "relative"},
+                                                children=[
+                                                    dcc.Graph(
+                                                        id="chart-geospatial-map",
+                                                        config={
+                                                            "displaylogo": False,
+                                                            "scrollZoom": True,
+                                                            "modeBarButtonsToRemove": ["lasso2d", "select2d"]
+                                                        }
+                                                    )
+                                                ]
+                                            )
+                                        ]
+                                    ),
+                                    
+                                    # Station Leaderboard Panel
+                                    create_panel(
+                                        title="Monitoring Stations & Locations Air Quality Leaderboard (Ranked Worst to Cleanest)",
+                                        children=[
+                                            html.Div(id="table-location-rankings", style={"marginTop": "10px"})
+                                        ]
+                                    )
+                                ]
+                            )
+                        ]
+                    ),
+                    
+                    # TAB 3: Exploratory Data Analysis & Trends
                     create_tab(
                         label="📊 EDA & Trends",
                         value="tab-eda",

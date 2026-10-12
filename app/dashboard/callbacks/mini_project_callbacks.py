@@ -28,7 +28,11 @@ from app.dashboard.components.mini_project_charts import (
     train_mini_project_models,
     create_actual_vs_predicted_chart,
     create_pca_variance_chart,
-    create_mini_gauge
+    create_mini_gauge,
+    create_geospatial_map,
+    create_location_kpis,
+    create_location_ranking_table,
+    extract_location_dataframe
 )
 
 
@@ -152,7 +156,40 @@ def register_mini_project_callbacks(app):
         filter_city = None if selected_city == "ALL" else selected_city
         return create_temporal_trends_chart(df, city=filter_city)
 
-    # 3. ML & Visuals Tab: Reactive Upload, Retrain, Model Comparison & Scatter
+    # 3. Geospatial Map & Locations Callback
+    @app.callback(
+        [Output("chart-geospatial-map", "figure"),
+         Output("map-kpi-grid", "children"),
+         Output("table-location-rankings", "children"),
+         Output("map-city-filter", "options")],
+        [Input("mini-project-tabs", "value"),
+         Input("map-metric-select", "value"),
+         Input("map-city-filter", "value"),
+         Input("mini-csv-upload", "contents"),
+         Input("mini-reset-btn", "n_clicks")]
+    )
+    def update_geospatial_section(tab_val, selected_metric, selected_city, upload_contents, reset_clicks):
+        """Update geospatial map, KPI cards, and station leaderboard table."""
+        df = _ACTIVE_DF if _ACTIVE_DF is not None else get_mini_project_df()
+        
+        # Build city dropdown options from active data
+        summary, _ = extract_location_dataframe(df)
+        if summary is not None and not summary.empty:
+            unique_cities = sorted([str(c) for c in summary["city"].unique()])
+            city_options = [{"label": "Pan-India (All Cities)", "value": "ALL"}] + [
+                {"label": c, "value": c} for c in unique_cities
+            ]
+        else:
+            city_options = [{"label": "Pan-India (All Cities)", "value": "ALL"}]
+            
+        fig_map = create_geospatial_map(df, metric=selected_metric or "aqi", selected_city=selected_city)
+        kpi_grid = create_location_kpis(df, selected_city=selected_city)
+        rankings_table = create_location_ranking_table(df, selected_city=selected_city)
+        
+        return fig_map, kpi_grid, rankings_table, city_options
+
+    # 4. ML & Visuals Tab: Reactive Upload, Retrain, Model Comparison & Scatter
+
     @app.callback(
         [Output("mini-model-comparison-table", "children"),
          Output("chart-actual-vs-pred", "figure"),
