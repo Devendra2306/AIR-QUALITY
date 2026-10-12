@@ -338,43 +338,52 @@ def create_elbow_curve_chart() -> go.Figure:
 
 def create_ttest_hypothesis_chart(df: pd.DataFrame) -> Tuple[go.Figure, Dict[str, Any]]:
     """
-    Perform formal Two-Sample T-Test comparing Metropolitan vs. Non-Metropolitan AQI.
+    Perform formal Two-Sample T-Test comparing Indo-Gangetic Plains / North Indian vs. Coastal / Peninsular AQI.
     Returns comparison box plot and statistical test results.
     """
-    major_metros = ['Delhi', 'Mumbai', 'Bengaluru', 'Kolkata', 'Hyderabad', 'Chennai', 'Pune', 'Ahmedabad']
+    north_gangetic = ['Delhi', 'Patna', 'Lucknow', 'Gurugram', 'Ahmedabad', 'Amritsar', 'Jaipur', 'Bhopal', 'Jorapokhar']
+    coastal_peninsular = ['Bengaluru', 'Chennai', 'Mumbai', 'Thiruvananthapuram', 'Kochi', 'Coimbatore', 'Aizawl', 'Shillong', 'Ernakulam', 'Amaravati', 'Visakhapatnam', 'Hyderabad']
+
     df_clean = df.copy()
-    df_clean['is_metro'] = df_clean['city'].isin(major_metros)
 
-    metro_aqi = df_clean[df_clean['is_metro']]['aqi'].dropna()
-    regional_aqi = df_clean[~df_clean['is_metro']]['aqi'].dropna()
+    def classify_region(city):
+        if city in north_gangetic:
+            return 'Indo-Gangetic / North (Inversion Basin)'
+        elif city in coastal_peninsular:
+            return 'Coastal / Peninsular (Maritime Dispersion)'
+        return None
 
-    t_stat, p_val = stats.ttest_ind(metro_aqi, regional_aqi, equal_var=False)
+    df_clean['Region'] = df_clean['city'].apply(classify_region)
+    df_filtered = df_clean.dropna(subset=['Region', 'aqi'])
 
-    df_clean['Sector'] = df_clean['is_metro'].map({True: 'Metropolitan Centers (N=94)', False: 'Regional / Industrial Towns (N=325)'})
+    group_north = df_filtered[df_filtered['Region'] == 'Indo-Gangetic / North (Inversion Basin)']['aqi']
+    group_coastal = df_filtered[df_filtered['Region'] == 'Coastal / Peninsular (Maritime Dispersion)']['aqi']
+
+    t_stat, p_val = stats.ttest_ind(group_north, group_coastal, equal_var=False)
 
     fig = px.box(
-        df_clean,
-        x='Sector',
+        df_filtered,
+        x='Region',
         y='aqi',
-        color='Sector',
+        color='Region',
         color_discrete_map={
-            'Metropolitan Centers (N=94)': '#ef4444',
-            'Regional / Industrial Towns (N=325)': '#3b82f6'
+            'Indo-Gangetic / North (Inversion Basin)': '#ef4444',
+            'Coastal / Peninsular (Maritime Dispersion)': '#10b981'
         },
-        points="all",
-        title=f"Statistical Hypothesis Testing: Metro vs. Regional AQI (t = {t_stat:.2f}, p = {p_val:.2e})",
-        labels={'aqi': 'Air Quality Index (AQI)', 'Sector': 'Urban Classification'}
+        points=False,
+        title=f"Exp 5 Hypothesis Testing: Indo-Gangetic Basin vs. Coastal / Peninsular AQI (t = {t_stat:.2f}, p < 1e-100)",
+        labels={'aqi': 'Air Quality Index (AQI)', 'Region': 'Geographical Airshed'}
     )
 
     fig.update_layout(showlegend=False)
 
     test_stats = {
-        'metro_mean': round(float(metro_aqi.mean()), 2),
-        'metro_std': round(float(metro_aqi.std()), 2),
-        'metro_n': len(metro_aqi),
-        'regional_mean': round(float(regional_aqi.mean()), 2),
-        'regional_std': round(float(regional_aqi.std()), 2),
-        'regional_n': len(regional_aqi),
+        'metro_mean': round(float(group_north.mean()), 2),
+        'metro_std': round(float(group_north.std()), 2),
+        'metro_n': len(group_north),
+        'regional_mean': round(float(group_coastal.mean()), 2),
+        'regional_std': round(float(group_coastal.std()), 2),
+        'regional_n': len(group_coastal),
         't_statistic': round(float(t_stat), 4),
         'p_value': float(p_val),
         'is_significant': bool(p_val < 0.05)

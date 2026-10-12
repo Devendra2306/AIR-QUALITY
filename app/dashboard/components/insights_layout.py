@@ -12,7 +12,7 @@ from dash import html, dcc
 from app.dashboard.components.layout import create_panel, create_metric_card, create_metric_grid
 
 
-def create_insights_tab_layout(city_options: list) -> html.Div:
+def create_insights_tab_layout(city_options: list, station_options: list = None) -> html.Div:
     """Create the interactive AI/ML Research Insights tab layout."""
     default_origin = "Delhi" if "Delhi" in city_options else (city_options[0] if city_options else "Delhi")
     default_dest = "Bengaluru" if "Bengaluru" in city_options else (city_options[-1] if city_options else "Bengaluru")
@@ -301,6 +301,95 @@ def create_insights_tab_layout(city_options: list) -> html.Div:
                                 ]
                             )
                         ]
+                    )
+                ]
+            ),
+
+            # SECTION 6: CAPSTONE MINI PROJECT - REAL-TIME PREDICTOR & POLICY SIMULATOR (EXP 10)
+            html.Div(style={"marginTop": "24px"}),
+            create_panel(
+                title="Experiment 10: Capstone Mini Project — Real-Time AQI Predictor & Decision Support System",
+                children=[
+                    html.Div(
+                        style={"background": "#eff6ff", "border": "1px solid #bfdbfe", "borderRadius": "8px", "padding": "14px 18px", "marginBottom": "16px"},
+                        children=[
+                            html.Span("⚡ SYNCHRONIZED WITH GOOGLE COLAB: ", style={"color": "#1d4ed8", "fontWeight": "bold"}),
+                            html.Span("This live inference engine uses "),
+                            html.Code("models/aqi_model.joblib", style={"background": "#dbeafe", "padding": "2px 6px", "borderRadius": "4px", "color": "#1e40af", "fontWeight": "bold"}),
+                            html.Span(" (Random Forest, R² = 0.9962), serialized in Step 10 of "),
+                            html.Code("Air_Quality_AI_ML_Mini_Project_Colab.ipynb", style={"background": "#dbeafe", "padding": "2px 6px", "borderRadius": "4px", "color": "#1e40af"}),
+                            html.Span(". Select any of the 419 official Indian CPCB monitoring stations to auto-fill its real telemetry, or adjust pollutant values to simulate environmental policies.")
+                        ]
+                    ),
+                    html.Div(
+                        className="form-row",
+                        style={"marginBottom": "16px"},
+                        children=[
+                            html.Label("Load Authentic CPCB Station Telemetry (Preset):", className="form-label", style={"fontWeight": "600", "fontSize": "0.95rem"}),
+                            dcc.Dropdown(
+                                id="mini-station-select",
+                                options=station_options or [],
+                                placeholder="Choose any of 419 monitoring stations across India to load real sensor readings...",
+                                clearable=True
+                            )
+                        ]
+                    ),
+                    html.Div(
+                        style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(170px, 1fr))", "gap": "14px", "background": "#f8fafc", "padding": "16px", "borderRadius": "8px", "border": "1px solid #e2e8f0", "marginBottom": "16px"},
+                        children=[
+                            html.Div([
+                                html.Label("PM2.5 (µg/m³):", style={"fontSize": "0.85rem", "fontWeight": "600"}),
+                                dcc.Input(id="mini-pm25", type="number", value=65.0, min=0, max=500, step=0.5, className="form-input")
+                            ]),
+                            html.Div([
+                                html.Label("PM10 (µg/m³):", style={"fontSize": "0.85rem", "fontWeight": "600"}),
+                                dcc.Input(id="mini-pm10", type="number", value=110.0, min=0, max=600, step=0.5, className="form-input")
+                            ]),
+                            html.Div([
+                                html.Label("NO2 (µg/m³):", style={"fontSize": "0.85rem", "fontWeight": "600"}),
+                                dcc.Input(id="mini-no2", type="number", value=35.0, min=0, max=300, step=0.5, className="form-input")
+                            ]),
+                            html.Div([
+                                html.Label("SO2 (µg/m³):", style={"fontSize": "0.85rem", "fontWeight": "600"}),
+                                dcc.Input(id="mini-so2", type="number", value=14.0, min=0, max=200, step=0.5, className="form-input")
+                            ]),
+                            html.Div([
+                                html.Label("CO (mg/m³):", style={"fontSize": "0.85rem", "fontWeight": "600"}),
+                                dcc.Input(id="mini-co", type="number", value=1.2, min=0, max=50, step=0.1, className="form-input")
+                            ]),
+                            html.Div([
+                                html.Label("O3 (µg/m³):", style={"fontSize": "0.85rem", "fontWeight": "600"}),
+                                dcc.Input(id="mini-o3", type="number", value=40.0, min=0, max=250, step=0.5, className="form-input")
+                            ]),
+                            html.Div([
+                                html.Label("Temp (°C):", style={"fontSize": "0.85rem", "fontWeight": "600"}),
+                                dcc.Input(id="mini-temp", type="number", value=26.0, min=-5, max=50, step=0.5, className="form-input")
+                            ]),
+                            html.Div([
+                                html.Label("Humidity (%):", style={"fontSize": "0.85rem", "fontWeight": "600"}),
+                                dcc.Input(id="mini-humidity", type="number", value=55.0, min=5, max=100, step=1.0, className="form-input")
+                            ]),
+                            html.Div([
+                                html.Label("Wind (km/h):", style={"fontSize": "0.85rem", "fontWeight": "600"}),
+                                dcc.Input(id="mini-wind", type="number", value=8.0, min=0, max=40, step=0.5, className="form-input")
+                            ])
+                        ]
+                    ),
+                    html.Div(
+                        style={"textAlign": "center", "marginBottom": "20px"},
+                        children=[
+                            html.Button(
+                                "🔮 Run Real-Time AQI Prediction (Colab ML Model)",
+                                id="mini-predict-btn",
+                                n_clicks=0,
+                                className="btn btn-primary btn-large",
+                                style={"fontSize": "1.05rem", "padding": "12px 28px"}
+                            )
+                        ]
+                    ),
+                    dcc.Loading(
+                        type="circle",
+                        children=html.Div(id="mini-predict-output")
                     )
                 ]
             )

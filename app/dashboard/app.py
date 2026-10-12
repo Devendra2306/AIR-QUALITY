@@ -44,6 +44,10 @@ class DashboardApp:
         """Setup dashboard layout."""
         df_cpcb = get_insights_dataframe()
         city_list = sorted(df_cpcb['city'].dropna().unique().tolist()) if 'city' in df_cpcb.columns else ["Delhi", "Bengaluru", "Mumbai"]
+        station_list = [
+            {"label": f"{r['city']} - {r['station'][:45]}", "value": r['station']}
+            for _, r in df_cpcb.iterrows()
+        ] if 'station' in df_cpcb.columns else []
 
         self.app.layout = html.Div(
             className="app-shell",
@@ -159,7 +163,7 @@ class DashboardApp:
                         create_tab(
                             label="Mini Project",
                             value="insights-tab",
-                            children=[create_insights_tab_layout(city_list)]
+                            children=[create_insights_tab_layout(city_list, station_list)]
                         ),
                         create_tab(
                             label="Export",
